@@ -227,6 +227,24 @@ trusting the model to include it. A file missing the line still works — the
 index falls back to the filename — so a user can write memory files in their own
 editor and the plugin treats them as first-class.
 
+### Loading: the index is message 0
+
+`TurboFieldfarePanel.init` scans both directories once, at panel construction,
+and adds the index as a `system` message before any user turn — topic names and
+one-line titles only, never bodies. That is the whole point of the split: the
+fixed per-session cost stays a few hundred tokens no matter how much memory
+accumulates, and the model spends the rest only on the topic it decides it
+needs. A line in the transcript says how many topics were loaded, because
+context spent without the user typing anything, and an answer shaped by a
+memory file they forgot writing, should not look like the model inventing house
+rules.
+
+The snapshot is taken once and never rewritten, matching `ChatSession`'s "no
+summarisation, no truncation, no reordering" rule. Only the *list* can go stale,
+and only against a hand-edit made mid-session — `read_memory_file` always reads
+live from disk, so nothing fetched is ever stale, and the rare case is already
+covered by starting a new chat.
+
 ### Fetching
 
 `read_memory_file(scope, topic)` is `effectful = false`, so it runs in Plan mode
@@ -294,7 +312,7 @@ tomorrow.
 | M1. Slug + index, pure | done |
 | M2. Global memory root | done |
 | M3. `read_memory_file` | done |
-| M4. Index injection | not started |
+| M4. Index injection | done |
 | M5. `write_memory` preview (Plan mode) | not started |
 | M6. `write_memory` apply (Act mode) | not started |
 | M7. Context-budget check | not started |

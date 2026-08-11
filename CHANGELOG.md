@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Memory is loaded automatically at the start of each chat: a short index of
+  topic names and one-line titles from both scopes, and nothing else. The
+  transcript says how many topics were loaded. A fresh install with no memory
+  files sends nothing at all.
 - `read_memory_file`: the assistant can read a memory topic in full — a markdown
   file under `.turbofieldfare/memory/` in the project, or the same directory in
   the IDE config directory for facts that apply to every project. Read-only, so

@@ -7,12 +7,17 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import dev.turbofieldfare.plugin.chat.ChatSession
+import dev.turbofieldfare.plugin.client.ChatMessage
 import dev.turbofieldfare.plugin.client.ServerStatus
 import dev.turbofieldfare.plugin.client.TurboFieldfareClient
+import dev.turbofieldfare.plugin.memory.GlobalMemory
+import dev.turbofieldfare.plugin.memory.MemoryIndex
 import dev.turbofieldfare.plugin.planmode.PlanModeState
 import dev.turbofieldfare.plugin.planmode.PlanModeStateMachine
 import dev.turbofieldfare.plugin.settings.TurboFieldfareSettings
 import dev.turbofieldfare.plugin.tools.LoopEvent
+import dev.turbofieldfare.plugin.tools.PROJECT_MEMORY_DIR
+import dev.turbofieldfare.plugin.tools.ProjectFiles
 import dev.turbofieldfare.plugin.tools.ShellApprover
 import dev.turbofieldfare.plugin.tools.ToolExecutor
 import dev.turbofieldfare.plugin.tools.allTools
@@ -81,10 +86,43 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
         }
         refreshModeButton()
 
+        loadMemoryIndex()
+
         sendButton.addActionListener { onSendOrCancel() }
         modeButton.addActionListener { toggleMode() }
         bindEnterToSend()
         startStatusPolling()
+    }
+
+    /**
+     * Puts the memory index in front of the model as message 0, before any user turn.
+     *
+     * A short list of topic names and one-line titles only — never the topic
+     * bodies. That is the whole point of the split: the fixed per-session cost
+     * stays a few hundred tokens no matter how much memory accumulates, and the
+     * model spends the rest only on the one topic it decides it needs, via
+     * `read_memory_file`.
+     *
+     * Skipped entirely when both directories are empty, rather than sending a
+     * "(nothing yet)" placeholder — on a fresh install that would spend tokens
+     * every session to describe a system that has nothing in it.
+     *
+     * The snapshot is taken once here and never rewritten, matching `ChatSession`'s
+     * "no summarisation, no truncation, no reordering" rule. Only the *list* can go
+     * stale, and only against a hand-edit made mid-session; `read_memory_file`
+     * always reads live from disk, so nothing fetched is ever stale.
+     */
+    private fun loadMemoryIndex() {
+        val projectDir = ProjectFiles.resolve(project, PROJECT_MEMORY_DIR)
+        val index = MemoryIndex.message(projectDir, GlobalMemory.root()) ?: return
+
+        session.add(ChatMessage(role = "system", content = index))
+        // Said out loud: this is context the user is spending without having typed
+        // anything, and an answer shaped by a memory file they forgot they wrote
+        // should not look like the model inventing house rules.
+        val topics = index.lines().count { it.startsWith("- ") }
+        transcript.appendText("[loaded $topics memory ${if (topics == 1) "topic" else "topics"}]\n")
+        transcript.endTextBlock()
     }
 
     private fun buildHeader(): JComponent = JPanel(BorderLayout()).apply {
