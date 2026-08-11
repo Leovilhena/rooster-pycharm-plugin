@@ -36,8 +36,11 @@ that matters is deterministic Kotlin.
 
 ## Build setup
 
-- **Gradle 8.14.3** (wrapper, distribution checksum pinned), **Kotlin 2.1.21**,
-  **IntelliJ Platform Gradle Plugin 2.18.1**, JVM target **21**.
+- **Gradle 9.7.0** (wrapper, distribution checksum pinned), **Kotlin 2.3.21**
+  compiling against language/API level 2.1 (the platform ships the Kotlin 2.1
+  stdlib), **IntelliJ Platform Gradle Plugin 2.18.1**, JVM target **21**.
+  IPGP 2.18 requires Gradle 9, and Gradle 9 requires a Kotlin plugin newer than
+  the platform's own — hence the split between compiler and API level.
 - The platform dependency is the **locally installed** PyCharm CE
   (`platformLocalPath` in `gradle.properties`, default `/Applications/PyCharm CE.app`)
   rather than a downloaded IDE distribution. This machine has 8GB of RAM and a
@@ -72,7 +75,7 @@ user not having started the server yet is the single most common state.
 | --- | --- |
 | 0. Scaffolding | done |
 | 1. HTTP client + health check | done |
-| 2. Basic non-tool chat | not started |
+| 2. Basic non-tool chat | done |
 | 3. Settings | not started |
 | 4. Read-only tools + tool loop | not started |
 | 5. Plan/Act + ProposeEdit (preview only) | not started |

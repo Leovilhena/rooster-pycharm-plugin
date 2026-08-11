@@ -24,3 +24,35 @@ data class ModelInfo(
     val id: String?,
     @SerializedName("owned_by") val ownedBy: String?,
 )
+
+// --- POST /v1/chat/completions ----------------------------------------------
+
+data class ChatMessage(
+    val role: String,
+    val content: String?,
+)
+
+data class ChatRequest(
+    val model: String,
+    val messages: List<ChatMessage>,
+    val stream: Boolean = true,
+    @SerializedName("max_tokens") val maxTokens: Int? = null,
+    val temperature: Double? = null,
+)
+
+data class ChatChunk(val choices: List<ChunkChoice>?)
+
+data class ChunkChoice(
+    val delta: ChunkDelta?,
+    @SerializedName("finish_reason") val finishReason: String?,
+)
+
+data class ChunkDelta(
+    val role: String?,
+    val content: String?,
+)
+
+/** Error envelope the server returns on a 4xx/5xx. */
+data class ErrorResponse(val error: ErrorDetail?)
+
+data class ErrorDetail(val message: String?, val type: String?)
