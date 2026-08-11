@@ -69,6 +69,33 @@ that matters is deterministic Kotlin.
 An unreachable server is a value (`ServerStatus.Down`), never an exception: the
 user not having started the server yet is the single most common state.
 
+## Plan/Act, and where it is enforced
+
+Two states, `PLAN` and `ACT`, held by a project-level `PlanModeStateMachine`.
+New sessions start in `PLAN`.
+
+**Enforcement is `ToolExecutor.gate(tool, mode)`** — a pure function of the
+tool's own `effectful` flag and the current mode, called immediately before the
+one line that runs a tool, with nothing in between. It cannot be argued with:
+there is no argument the model can pass to it, no phrasing it responds to, and
+no context length at which it starts agreeing. The refusal text is fixed and is
+returned to the model as the tool result, so the model knows the call did not
+happen.
+
+`PlanModeStateMachine.setByUser()` is the only mutator, and its only call site
+is an `ActionListener` on a button. No tool touches the mode, and the model is
+never offered one that could.
+
+A refused edit is still *shown*: `Tool.previewEdit()` is read-only, is computed
+before the gate, and produces the diff card. The card is stamped "Plan mode —
+not executed. Nothing was written." with Apply disabled, because the user should
+never have to infer from a missing button whether something hit the disk.
+
+`propose_edit` replaces a whole file rather than applying a patch: two string
+arguments, no patch dialect for the model to get subtly wrong, and the diff is
+computed here from the real file instead of trusted from the model. The cost is
+tokens, which is the right thing to spend to remove a class of silent corruption.
+
 ## Tool loop
 
 `ToolExecutor.run()` is the whole agentic loop; the server has none. One
@@ -123,7 +150,7 @@ tomorrow.
 | 2. Basic non-tool chat | done |
 | 3. Settings | done |
 | 4. Read-only tools + tool loop | done |
-| 5. Plan/Act + ProposeEdit (preview only) | not started |
+| 5. Plan/Act + ProposeEdit (preview only) | done |
 | 6. Act-mode edit execution + undo | not started |
 | 7. Shell tool + allow-list | not started |
 | 8. Inline completion | not started |

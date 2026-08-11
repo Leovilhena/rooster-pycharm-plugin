@@ -9,17 +9,19 @@ import com.intellij.util.ui.JBUI
 import dev.turbofieldfare.plugin.chat.ChatSession
 import dev.turbofieldfare.plugin.client.ServerStatus
 import dev.turbofieldfare.plugin.client.TurboFieldfareClient
-import dev.turbofieldfare.plugin.tools.LoopEvent
-import dev.turbofieldfare.plugin.tools.READ_ONLY_TOOLS
-import dev.turbofieldfare.plugin.tools.ToolExecutor
+import dev.turbofieldfare.plugin.planmode.PlanModeState
+import dev.turbofieldfare.plugin.planmode.PlanModeStateMachine
 import dev.turbofieldfare.plugin.settings.TurboFieldfareSettings
+import dev.turbofieldfare.plugin.tools.ALL_TOOLS
+import dev.turbofieldfare.plugin.tools.LoopEvent
+import dev.turbofieldfare.plugin.tools.ToolExecutor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,50 +36,56 @@ import javax.swing.JPanel
 import javax.swing.KeyStroke
 
 /**
- * The tool window's root panel: server status, transcript, composer.
+ * The tool window's root panel: status, Plan/Act toggle, transcript, composer.
  *
- * All model traffic runs on [scope] (a background dispatcher); the only work done
- * on the EDT is appending text, so a slow generation never freezes the IDE.
+ * All model traffic runs on [scope]; the only work done on the EDT is updating
+ * components, so a slow generation never freezes the IDE.
  */
 class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout()), Disposable {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    /**
-     * Rebuilt when the configured server URL changes, so a port change in
-     * Settings takes effect without restarting the IDE — but not rebuilt per
-     * request, since each client owns HTTP threads.
-     */
-    private var cachedClient: Pair<String, TurboFieldfareClient>? = null
     private val session = ChatSession()
+    private val planMode = PlanModeStateMachine.getInstance(project)
+
+    private var cachedClient: Pair<String, TurboFieldfareClient>? = null
 
     private val statusDot = StatusDot()
-    private val transcript = JBTextArea().apply {
-        isEditable = false
-        lineWrap = true
-        wrapStyleWord = true
-    }
+    private val modeButton = JButton()
+    private val transcript = TranscriptPanel()
+    private val transcriptScroll = JBScrollPane(transcript)
     private val composer = JBTextArea(3, 20).apply {
         lineWrap = true
         wrapStyleWord = true
     }
     private val sendButton = JButton("Send")
 
-    /** Model id last advertised by the server; null until the first successful poll. */
     @Volatile
     private var serverModel: String? = null
 
-    /** Non-null exactly while a generation is in flight. */
     private var generation: Job? = null
 
     init {
         border = JBUI.Borders.empty(8)
-        add(statusDot, BorderLayout.NORTH)
-        add(JBScrollPane(transcript), BorderLayout.CENTER)
+        add(buildHeader(), BorderLayout.NORTH)
+        add(transcriptScroll, BorderLayout.CENTER)
         add(buildComposer(), BorderLayout.SOUTH)
 
+        if (!TurboFieldfareSettings.getInstance().state.planModeDefaultOnNewSession) {
+            // Even this is a human decision: the user set it in Settings.
+            planMode.setByUser(PlanModeState.ACT)
+        }
+        refreshModeButton()
+
         sendButton.addActionListener { onSendOrCancel() }
+        modeButton.addActionListener { toggleMode() }
         bindEnterToSend()
         startStatusPolling()
+    }
+
+    private fun buildHeader(): JComponent = JPanel(BorderLayout()).apply {
+        add(statusDot, BorderLayout.WEST)
+        add(modeButton, BorderLayout.EAST)
+        border = JBUI.Borders.emptyBottom(6)
     }
 
     private fun buildComposer(): JComponent = JPanel(BorderLayout()).apply {
@@ -86,21 +94,43 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
         add(sendButton, BorderLayout.EAST)
     }
 
-    /** Enter sends, Shift+Enter inserts a newline — the convention people expect. */
+    /**
+     * The one and only place the session moves between Plan and Act.
+     *
+     * It is an `ActionListener` on a button, i.e. it can only run because a human
+     * clicked it. No model output reaches this method.
+     */
+    private fun toggleMode() {
+        val next = if (planMode.current() == PlanModeState.PLAN) PlanModeState.ACT else PlanModeState.PLAN
+        planMode.setByUser(next)
+        refreshModeButton()
+        transcript.endTextBlock()
+        transcript.appendText("\n[switched to ${next.name} mode]\n")
+        transcript.endTextBlock()
+    }
+
+    private fun refreshModeButton() {
+        val mode = planMode.current()
+        modeButton.text = if (mode == PlanModeState.PLAN) "Plan mode" else "Act mode"
+        modeButton.toolTipText = when (mode) {
+            PlanModeState.PLAN -> "Edits and shell commands are refused. Click to switch to Act mode."
+            PlanModeState.ACT -> "Edits and shell commands can be approved. Click to return to Plan mode."
+        }
+    }
+
     private fun bindEnterToSend() {
         val enter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0)
         composer.inputMap.put(enter, "turbofieldfare.send")
         composer.actionMap.put("turbofieldfare.send", object : AbstractAction() {
             override fun actionPerformed(e: ActionEvent) = onSendOrCancel()
         })
-        val shiftEnter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.SHIFT_DOWN_MASK)
-        composer.inputMap.put(shiftEnter, "insert-break")
+        composer.inputMap.put(
+            KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.SHIFT_DOWN_MASK),
+            "insert-break",
+        )
     }
 
     private fun onSendOrCancel() {
-        // isActive, not just non-null: a very short generation can finish before
-        // `generation` is even assigned, and a click must not cancel a dead job
-        // and then silently do nothing.
         generation?.takeIf { it.isActive }?.let {
             it.cancel()
             return
@@ -113,47 +143,57 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
 
     private fun send(text: String) {
         session.addUser(text)
-        append("\nYou: $text\n\nAssistant: ")
+        transcript.endTextBlock()
+        transcript.appendText("\nYou: $text\n\nAssistant: ")
         setGenerating(true)
 
         val configuredModel = TurboFieldfareSettings.getInstance().state.modelId.ifBlank { null }
         val model = configuredModel ?: serverModel ?: FALLBACK_MODEL
-        val executor = ToolExecutor(project, session, READ_ONLY_TOOLS)
+        val executor = ToolExecutor(project, session, ALL_TOOLS, planMode)
 
         generation = scope.launch {
             try {
                 executor.run(client(), model) { event ->
-                    withContext(Dispatchers.EDT) {
-                        when (event) {
-                            is LoopEvent.Text -> append(event.text)
-                            is LoopEvent.ToolActivity -> append("\n  · ${event.detail}\n")
-                            is LoopEvent.Done -> event.reason?.let { append("\n[$it]") }
-                        }
-                    }
+                    withContext(Dispatchers.EDT) { render(event) }
                 }
             } finally {
-                // Runs on cancellation too, so the button always returns to "Send".
-                withContext(Dispatchers.EDT + kotlinx.coroutines.NonCancellable) {
-                    append("\n")
+                withContext(Dispatchers.EDT + NonCancellable) {
+                    transcript.appendText("\n")
                     setGenerating(false)
                 }
             }
         }
     }
 
-    private fun client(): TurboFieldfareClient {
-        val url = TurboFieldfareSettings.getInstance().baseUrl()
-        cachedClient?.takeIf { it.first == url }?.let { return it.second }
-        return TurboFieldfareClient(url).also { cachedClient = url to it }
+    private fun render(event: LoopEvent) {
+        when (event) {
+            is LoopEvent.Text -> transcript.appendText(event.text)
+            is LoopEvent.ToolActivity -> {
+                transcript.endTextBlock()
+                transcript.appendText("  · ${event.detail}\n")
+                transcript.endTextBlock()
+            }
+
+            is LoopEvent.EditProposed ->
+                transcript.addCard(EditProposalCard(project, event.preview, blocked = event.blocked))
+
+            is LoopEvent.Done -> event.reason?.let { transcript.appendText("\n[$it]") }
+        }
+        scrollToBottom()
+    }
+
+    private fun scrollToBottom() {
+        transcriptScroll.verticalScrollBar.let { it.value = it.maximum }
     }
 
     private fun setGenerating(generating: Boolean) {
         sendButton.text = if (generating) "Cancel" else "Send"
     }
 
-    private fun append(text: String) {
-        transcript.append(text)
-        transcript.caretPosition = transcript.document.length
+    private fun client(): TurboFieldfareClient {
+        val url = TurboFieldfareSettings.getInstance().baseUrl()
+        cachedClient?.takeIf { it.first == url }?.let { return it.second }
+        return TurboFieldfareClient(url).also { cachedClient = url to it }
     }
 
     private fun startStatusPolling() {
@@ -173,8 +213,6 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
 
     private companion object {
         const val POLL_INTERVAL_MS = 5_000L
-
-        /** Used only if the server hasn't answered `/v1/models` yet. */
         const val FALLBACK_MODEL = "gemma-4-26b-a4b-it"
     }
 }

@@ -29,3 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Read-only tools the assistant can call while answering: `read_file`,
   `list_files` and `search_in_files`, each confined to the open project. The
   transcript shows every tool call as it happens.
+- **Plan / Act modes.** New sessions start in Plan mode, where file edits are
+  refused outright. A `Plan mode` / `Act mode` toggle in the tool window header
+  is the only way to switch, and only a click can do it.
+- `propose_edit`: the assistant can propose replacing a file's contents. The
+  proposal appears in the transcript as a card with the changed line counts, a
+  **Show diff** button that opens PyCharm's diff viewer, and an Apply button.
+  In Plan mode the card is stamped "not executed, nothing was written" and Apply
+  is disabled.

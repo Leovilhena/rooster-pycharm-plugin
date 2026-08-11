@@ -46,6 +46,16 @@ interface Tool {
      */
     fun execute(project: Project, arguments: JsonObject): String
 
+    /**
+     * A read-only description of what this call *would* do, or null when there is
+     * nothing to show.
+     *
+     * Called before the gate, and safe to call in Plan mode, because it only
+     * reads. That is what lets a refused edit still appear as a diff card marked
+     * "not applied" instead of vanishing into a refusal string.
+     */
+    fun previewEdit(project: Project, arguments: JsonObject): EditPreview? = null
+
     fun toSpec(): ToolSpec = ToolSpec(
         function = FunctionSpec(name = name, description = description, parameters = parameters),
     )

@@ -153,3 +153,10 @@ object SearchInFilesTool : Tool {
 
 /** Tools that are safe in any mode, because they change nothing. */
 val READ_ONLY_TOOLS: List<Tool> = listOf(ReadFileTool, ListFilesTool, SearchInFilesTool)
+
+/**
+ * Every tool offered to the model. Effectful ones are included in Plan mode too:
+ * the gate refuses them at call time, which lets the model propose a change and
+ * the user see the proposal, instead of the model not knowing edits exist.
+ */
+val ALL_TOOLS: List<Tool> = READ_ONLY_TOOLS + ProposeEditTool
