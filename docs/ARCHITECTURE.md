@@ -391,7 +391,7 @@ tomorrow.
 | M3. `read_memory_file` | done |
 | M4. Index injection | done |
 | M5. `write_memory` preview (Plan mode) | done |
-| M6. `write_memory` apply (Act mode) | code complete; Apply click-through pending |
+| M6. `write_memory` apply (Act mode) | done — verified in a running IDE, both scopes |
 | M7. Context-budget check | done |
 
 ## Error messages and budgets
@@ -437,18 +437,19 @@ tomorrow.
   platform fixture this repo does not use. The overload mirrors the one
   `ProjectFiles.resolve` already has, and `FileEditApplierTest` covers both
   branches through it.
-- **`ROOSTER.md`'s ordering is unverified in a running IDE.** `ProjectInstructions.read`
-  is covered by `ProjectInstructionsTest` (present, absent, blank, no-root,
-  directory-in-the-way), and the sandbox was confirmed to start with the plugin
-  loaded, the new ids in place and settings reset to defaults. What was not
-  observed is the composed system message itself: the tool window is constructed
-  only when a human opens it, and this environment grants no screen recording
-  permission (`screencapture` returns a black frame) and no usable accessibility
-  tree, so the panel cannot be opened or read. The composition it performs is
-  `listOfNotNull(instructions, index).joinToString("\n\n")` — ordering is
-  positional and has no branch in it — but "instructions actually appear ahead
-  of the index in what the server receives" is asserted by reading, not by
-  running.
+- **`ROOSTER.md`'s ordering was unverifiable in this environment, confirmed by a
+  human afterward.** `ProjectInstructions.read` is covered by
+  `ProjectInstructionsTest` (present, absent, blank, no-root, directory-in-the-way),
+  but the agent building this feature had no screen recording permission
+  (`screencapture` returns a black frame) or usable accessibility tree, so it
+  could not open or read the tool window itself. A human ran the actual
+  sandbox afterward: asking "what are the house rules for this project"
+  answered directly from `ROOSTER.md` with no tool call, and asking "how
+  should I write tests here" correctly triggered `read_memory_file` for the
+  separate `testing-conventions` topic — confirming both that instructions
+  load ahead of the index in what the server receives, and that the two are
+  genuinely on different paths (always-loaded vs. fetched on demand), not
+  just positionally distinguishable in code.
 - **The rename to Rooster drops the state it used to read, on purpose.** The
   settings file moved from `turbofieldfare.xml` to `rooster.xml`, the tool
   window id from `TurboFieldfare` to `Rooster`, and both memory directories
