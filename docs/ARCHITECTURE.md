@@ -11,7 +11,7 @@ the code is the bug report.
 
 | Package | Responsibility |
 | --- | --- |
-| `client/` | `TurboFieldfareClient` — JDK `java.net.http.HttpClient`, streaming SSE; wire-format data classes (Gson) |
+| `client/` | `RoosterClient` — JDK `java.net.http.HttpClient`, streaming SSE; wire-format data classes (Gson) |
 | `chat/` | `ChatSession` — message history for one conversation |
 | `tools/` | Tool definitions (`ReadFile`, `ListFiles`, `SearchInFiles`, `ReadMemoryFile`, `ProposeEdit`, `WriteMemory`, `RunShellCommand`) and `ToolExecutor`, the client-side tool loop |
 | `planmode/` | `PlanModeStateMachine` — `PLAN` / `ACT`, the enforcement point |
@@ -20,7 +20,7 @@ the code is the bug report.
 | `shell/` | `ShellCommandExecutor`, `ShellAllowListMatcher` |
 | `completion/` | Inline ghost-text completion provider (opt-in, off by default) |
 | `ui/` | Tool window, chat panel, diff cards, approval cards (plain Swing + `com.intellij.diff.*`) |
-| `settings/` | `TurboFieldfareSettings` (`PersistentStateComponent`) + `Configurable` UI |
+| `settings/` | `RoosterSettings` (`PersistentStateComponent`) + `Configurable` UI |
 
 ## Trust boundaries
 
@@ -57,7 +57,7 @@ that matters is deterministic Kotlin.
 
 ## Client notes
 
-`TurboFieldfareClient` pins two things that cost real debugging time:
+`RoosterClient` pins two things that cost real debugging time:
 
 - **`HttpClient.Version.HTTP_1_1`.** With the JDK default (HTTP/2 with an h2c
   upgrade attempt), every request from inside the IDE timed out against the
@@ -72,7 +72,7 @@ user not having started the server yet is the single most common state.
 
 ## Inline completion
 
-`TurboFieldfareInlineCompletionProvider` extends the platform's
+`RoosterInlineCompletionProvider` extends the platform's
 `DebouncedInlineCompletionProvider` and is registered on the
 `com.intellij.inline.completion.provider` extension point (verified against the
 installed PyCharm CE 2025.2.5 SDK, not assumed).
@@ -190,7 +190,7 @@ Persistent facts that survive across chat sessions, in two independent scopes:
   existing `ProjectFiles.resolve()`. It is just another project-relative path;
   no new confinement logic exists for it.
 - **Global** — `<PathManager.getConfigPath()>/turbofieldfare/memory/<slug>.md`.
-  That is the same config directory `TurboFieldfareSettings` persists into
+  That is the same config directory `RoosterSettings` persists into
   (verified on this machine: the settings file is at
   `…/PC-2025.2.5/config/options/turbofieldfare.xml`, and `getOptionsPath()` is
   `getConfigPath() + "/options"`, so the memory directory sits beside it). It is
@@ -229,7 +229,7 @@ editor and the plugin treats them as first-class.
 
 ### Loading: the index is message 0
 
-`TurboFieldfarePanel.init` scans both directories once, at panel construction,
+`RoosterPanel.init` scans both directories once, at panel construction,
 and adds the index as a `system` message before any user turn — topic names and
 one-line titles only, never bodies. That is the whole point of the split: the
 fixed per-session cost stays a few hundred tokens no matter how much memory
@@ -340,13 +340,13 @@ exceeds an identical one without it by precisely the index's own cost.
 
 ## Settings and the localhost rule
 
-`TurboFieldfareSettings` is an application-level `PersistentStateComponent` (one
+`RoosterSettings` is an application-level `PersistentStateComponent` (one
 local server, not one per project). `LocalhostOnlyValidator` is the only thing
 allowed to say a host is acceptable, and it is applied in **two** places:
 
-1. `TurboFieldfareConfigurable.apply()` — the path a human takes, where the
+1. `RoosterConfigurable.apply()` — the path a human takes, where the
    rejection also has to explain itself.
-2. `TurboFieldfareSettings.loadState()` — because `turbofieldfare.xml` is an
+2. `RoosterSettings.loadState()` — because `turbofieldfare.xml` is an
    ordinary file a user can hand-edit, and settings on disk are not trusted
    input. A non-loopback host found there is reset to the default.
 
@@ -383,7 +383,7 @@ tomorrow.
 
 ## Error messages and budgets
 
-- `TurboFieldfareClient.explain()` rewrites the server's terse 4xx bodies into
+- `RoosterClient.explain()` rewrites the server's terse 4xx bodies into
   something actionable: a context overflow says to start a new chat or raise
   `--max-context`; a rejected tool schema says so explicitly; an unknown model
   points at the model id setting.

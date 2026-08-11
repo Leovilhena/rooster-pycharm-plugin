@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The plugin is now called Rooster.** The name it shipped under was the same
+  as the inference server it talks to, which made every sentence about either
+  one ambiguous. The server keeps its name; only this plugin is renamed. The
+  Kotlin package moved from `dev.turbofieldfare.plugin` to `dev.rooster.plugin`
+  and the classes named after the old brand moved with it — an internal change
+  with no behaviour attached.
 - Inline completion now only fires for Python and shell files (`py`, `pyi`,
   `sh`, `bash`, `zsh`) — every other file type skips the request entirely.
   The extension check is a pure function, `isSupportedCompletionExtension`,

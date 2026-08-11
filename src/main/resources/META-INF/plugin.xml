@@ -1,5 +1,5 @@
 <idea-plugin>
-    <id>dev.turbofieldfare.plugin</id>
+    <id>dev.rooster.plugin</id>
     <name>TurboFieldfare</name>
     <vendor>leovilhena</vendor>
 
@@ -15,17 +15,17 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService
-                serviceImplementation="dev.turbofieldfare.plugin.settings.TurboFieldfareSettings"/>
+                serviceImplementation="dev.rooster.plugin.settings.RoosterSettings"/>
         <applicationConfigurable
                 parentId="tools"
                 id="dev.turbofieldfare.settings"
                 displayName="TurboFieldfare"
-                instance="dev.turbofieldfare.plugin.settings.TurboFieldfareConfigurable"/>
+                instance="dev.rooster.plugin.settings.RoosterConfigurable"/>
         <inline.completion.provider
-                implementation="dev.turbofieldfare.plugin.completion.TurboFieldfareInlineCompletionProvider"/>
+                implementation="dev.rooster.plugin.completion.RoosterInlineCompletionProvider"/>
         <toolWindow id="TurboFieldfare"
                     anchor="right"
                     icon="AllIcons.Toolwindows.ToolWindowMessages"
-                    factoryClass="dev.turbofieldfare.plugin.ui.TurboFieldfareToolWindowFactory"/>
+                    factoryClass="dev.rooster.plugin.ui.RoosterToolWindowFactory"/>
     </extensions>
 </idea-plugin>
