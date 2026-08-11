@@ -182,6 +182,18 @@ neither `../../.ssh/id_rsa` nor a symlink planted inside the repo can turn a
 read-only tool into an exfiltration channel. Refusal returns an error string to
 the model; there is no fallback path.
 
+## Chat panel UI
+
+The transcript is a `BoxLayout` stack of real Swing components, not an HTML
+document, because approval and diff cards need real buttons a user can click.
+
+**Font.** `chatFont()` in `TranscriptPanel.kt` is the single source for chat
+prose: `JBFont.label()` derived one point larger. `JBFont` rather than Swing's
+raw default is the actual fix behind "the font is wrong" — the default ignores
+both the IDE theme and the user's font-size setting. The extra point applies to
+prose read at length (transcript body, composer) only; chrome keeps the existing
+`UIUtil.ComponentStyle.SMALL` convention.
+
 ## Memory
 
 Persistent facts that survive across chat sessions, in two independent scopes:
@@ -393,6 +405,17 @@ tomorrow.
 | M5. `write_memory` preview (Plan mode) | done |
 | M6. `write_memory` apply (Act mode) | done — verified in a running IDE, both scopes |
 | M7. Context-budget check | done |
+
+### Chat UI redesign
+
+| Phase | State |
+| --- | --- |
+| A. Font | done |
+| B. Message bubbles | not started |
+| C. Copy button | not started |
+| D. Tool-call display | not started |
+| E. Thinking indicator | not started |
+| F. Context attachments | not started |
 
 ## Error messages and budgets
 

@@ -64,6 +64,7 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
     private val composer = JBTextArea(3, 20).apply {
         lineWrap = true
         wrapStyleWord = true
+        font = chatFont()
     }
     private val sendButton = JButton("Send")
 

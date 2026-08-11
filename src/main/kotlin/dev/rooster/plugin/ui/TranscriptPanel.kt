@@ -1,12 +1,23 @@
 package dev.rooster.plugin.ui
 
 import com.intellij.ui.components.JBTextArea
+import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.Dimension
 import javax.swing.BoxLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
+
+/**
+ * The font for chat prose: the IDE's own label font, one point up.
+ *
+ * `JBFont.label()` rather than Swing's raw default so the text tracks the IDE's
+ * theme and font-size setting instead of ignoring both. The extra point is only
+ * for prose read at length — chrome (headers, footers, status lines) keeps the
+ * platform's `UIUtil.ComponentStyle.SMALL` convention.
+ */
+fun chatFont(): java.awt.Font = JBFont.label().let { it.deriveFont(it.size + 1f) }
 
 /**
  * The conversation, as a vertical stack of blocks.
@@ -53,6 +64,7 @@ class TranscriptPanel : JPanel() {
             isOpaque = false
             alignmentX = Component.LEFT_ALIGNMENT
             border = JBUI.Borders.empty(2, 0)
+            font = chatFont()
         }
         add(area)
         currentText = area

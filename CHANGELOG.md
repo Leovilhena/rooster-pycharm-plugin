@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Chat text now uses the IDE's own font (`JBFont.label()`, one point larger for
+  prose) instead of Swing's raw default, so the transcript and composer follow
+  the active theme and the IDE's font-size setting rather than ignoring both.
+
 - **The plugin is now called Rooster.** The name it shipped under was the same
   as the inference server it talks to, which made every sentence about either
   one ambiguous. The server keeps its name; only this plugin is renamed. The
