@@ -16,6 +16,7 @@ the code is the bug report.
 | `tools/` | Tool definitions (`ReadFile`, `ListFiles`, `SearchInFiles`, `ProposeEdit`, `RunShellCommand`) and `ToolExecutor`, the client-side tool loop |
 | `planmode/` | `PlanModeStateMachine` — `PLAN` / `ACT`, the enforcement point |
 | `edit/` | `FileEditApplier` — `WriteCommandAction`-wrapped Document edits, undo-grouped |
+| `memory/` | `MemorySlug` (topic-name rule), `MemoryIndex` (directory scan → the always-loaded index) — pure, no IDE dependency |
 | `shell/` | `ShellCommandExecutor`, `ShellAllowListMatcher` |
 | `completion/` | Inline ghost-text completion provider (opt-in, off by default) |
 | `ui/` | Tool window, chat panel, diff cards, approval cards (plain Swing + `com.intellij.diff.*`) |
@@ -181,6 +182,56 @@ neither `../../.ssh/id_rsa` nor a symlink planted inside the repo can turn a
 read-only tool into an exfiltration channel. Refusal returns an error string to
 the model; there is no fallback path.
 
+## Memory
+
+Persistent facts that survive across chat sessions, in two independent scopes:
+
+- **Project** — `<project root>/.turbofieldfare/memory/<slug>.md`, resolved by the
+  existing `ProjectFiles.resolve()`. It is just another project-relative path;
+  no new confinement logic exists for it.
+- **Global** — application-scoped, alongside where `TurboFieldfareSettings`
+  already persists. Outside every project root, so `ProjectFiles` cannot confine
+  it (see below).
+
+Deliberately **not** RAG. The corpus is curated by construction, not
+accumulated: an embedding model would cost real RAM on an 8GB machine already
+holding Gemma4, and a 4B-active-parameter model is worse than a big one at
+judging whether a retrieved chunk is relevant — noise would cost more than
+retrieval buys. See "Deliberate simplifications" at the end of this section.
+
+**No persisted index.** The index is computed by scanning the two directories.
+Cheap at this corpus size, and there is no manifest that can drift out of sync
+with the files it describes.
+
+**No frontmatter, no `type` taxonomy.** The two directories *are* the type
+system. A `type:` field the model has to remember to set correctly — and could
+set to something contradicting the file's own location — buys nothing the
+directory doesn't already give for free.
+
+### The slug rule is the confinement mechanism for global scope
+
+`isValidSlug` (`memory/MemorySlug.kt`) accepts `^[a-z0-9]+(-[a-z0-9]+)*$` up to
+60 characters, and the plugin appends `.md` itself. A filename is never accepted
+from the model. This matters because global memory lives outside every project
+root, where `ProjectFiles`'s symlink-aware check does not apply: a slug contains
+no `/`, no `.` and no `..`, so traversal is not *refused*, it is unrepresentable.
+
+### File format, and hand-authored files
+
+Plain markdown: `# One-line title` first, free-form body after. The write tool
+always emits that line itself from a separate `title` argument rather than
+trusting the model to include it. A file missing the line still works — the
+index falls back to the filename — so a user can write memory files in their own
+editor and the plugin treats them as first-class.
+
+### Budget
+
+The index is capped at `MemoryIndex.MAX_INDEX_CHARS` (~2000 chars, ~500 tokens
+on the existing chars/4 estimate, ~3% of a 16K window) with an "N more topics
+not shown" note past it, so a hand-filled directory cannot silently evict the
+user's question. Because the index is just message 0, the existing 75% context
+warning already accounts for it with no change.
+
 ## Settings and the localhost rule
 
 `TurboFieldfareSettings` is an application-level `PersistentStateComponent` (one
@@ -211,6 +262,18 @@ tomorrow.
 | 7. Shell tool + allow-list | done |
 | 8. Inline completion | done |
 | 9. Polish | done |
+
+### Memory feature
+
+| Phase | State |
+| --- | --- |
+| M1. Slug + index, pure | done |
+| M2. Global memory root | not started |
+| M3. `read_memory_file` | not started |
+| M4. Index injection | not started |
+| M5. `write_memory` preview (Plan mode) | not started |
+| M6. `write_memory` apply (Act mode) | not started |
+| M7. Context-budget check | not started |
 
 ## Error messages and budgets
 
@@ -250,18 +313,16 @@ tomorrow.
 
 Not built yet; captured here so the design thinking isn't lost before it is.
 
-### Memory
+### Skills
 
-A flat, curated file (or a small set of them) loaded into the system prompt
-alongside a chat session — the same pattern this project's own development
-tooling uses for itself. Deliberately **not** a vector DB/RAG/embeddings
-setup: the corpus (user preferences, project facts, prior decisions) stays
-small by construction, so semantic retrieval buys nothing a full read
-wouldn't, while costing a local embedding model's RAM on a machine already
-spending 2GB on Gemma4, an index to keep fresh, and a weaker model's ability
-to judge which retrieved chunk is actually relevant. Skip RAG here unless the
-memory corpus itself grows past what fits in context — it hasn't, and
-shouldn't be allowed to by design (curated, not accumulated).
+The memory mechanism — a directory of named markdown files, indexed by scan
+rather than a manifest, fetched on demand by a `(scope, topic)`-shaped
+read-only tool — generalises to bundled "skills" without changing anything
+about the mechanism: a skill is structurally just another named file in a
+third directory with its own index section and a `read_skill_file` tool of
+identical shape. What is genuinely new, and deliberately not designed here, is
+*invocation*: a skill has to be told to the model as "follow this", not merely
+offered as a fact. Not guessed at until it is built.
 
 ### MCP client (library ingestion + fetch_url)
 
