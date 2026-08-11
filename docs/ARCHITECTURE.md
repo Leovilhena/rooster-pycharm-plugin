@@ -51,12 +51,27 @@ that matters is deterministic Kotlin.
 - Kotlin stdlib and `kotlinx-coroutines` are `compileOnly` / not bundled — the
   platform ships both, and shipping a second copy breaks at runtime.
 
+## Client notes
+
+`TurboFieldfareClient` pins two things that cost real debugging time:
+
+- **`HttpClient.Version.HTTP_1_1`.** With the JDK default (HTTP/2 with an h2c
+  upgrade attempt), every request from inside the IDE timed out against the
+  TurboFieldfare server while the identical call from a standalone JVM
+  succeeded. The server is HTTP/1.1; the upgrade probe buys nothing and hangs.
+- **`Builder.NO_PROXY`.** The IDE installs its own default `ProxySelector`. We
+  only ever talk to loopback, and a proxy in that path can only break the
+  connection or push the conversation off the machine.
+
+An unreachable server is a value (`ServerStatus.Down`), never an exception: the
+user not having started the server yet is the single most common state.
+
 ## Phase status
 
 | Phase | State |
 | --- | --- |
 | 0. Scaffolding | done |
-| 1. HTTP client + health check | not started |
+| 1. HTTP client + health check | done |
 | 2. Basic non-tool chat | not started |
 | 3. Settings | not started |
 | 4. Read-only tools + tool loop | not started |

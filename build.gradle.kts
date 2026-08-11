@@ -1,4 +1,3 @@
-import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
     kotlin("jvm") version "2.3.21"
@@ -19,7 +18,6 @@ dependencies {
     intellijPlatform {
         local(providers.gradleProperty("platformLocalPath"))
         bundledPlugin("PythonCore")
-        testFramework(TestFrameworkType.Platform)
     }
 
     // The platform ships both of these; compiling against them must not bundle them.
@@ -28,6 +26,12 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation("com.google.code.gson:gson:2.11.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+    // The IntelliJ Platform jars land on the test classpath and reference JUnit 4
+    // types at class-load time, even though our own tests are JUnit 5 only.
+    testRuntimeOnly("junit:junit:4.13.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.4")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.11.4")
 }
 
 kotlin {
