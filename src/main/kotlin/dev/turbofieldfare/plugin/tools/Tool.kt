@@ -44,7 +44,7 @@ interface Tool {
      * `role: tool` result. Must not throw: an error is a result too, and a
      * thrown exception would abandon a tool call the model is waiting on.
      */
-    fun execute(project: Project, arguments: JsonObject): String
+    suspend fun execute(project: Project, arguments: JsonObject): String
 
     /**
      * A read-only description of what this call *would* do, or null when there is

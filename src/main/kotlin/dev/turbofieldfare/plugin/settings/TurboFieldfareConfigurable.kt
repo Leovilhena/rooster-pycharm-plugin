@@ -14,6 +14,7 @@ class TurboFieldfareConfigurable : Configurable {
     private val portField = JBTextField()
     private val modelField = JBTextField()
     private val planModeDefault = JBCheckBox("New chats start in Plan mode")
+    private val allowList = com.intellij.ui.components.JBTextArea(8, 40)
 
     private var root: JComponent? = null
 
@@ -30,6 +31,18 @@ class TurboFieldfareConfigurable : Configurable {
             .addLabeledComponent("Server port:", portField)
             .addLabeledComponent("Model id (blank = ask the server):", modelField)
             .addComponent(planModeDefault)
+            .addLabeledComponent(
+                "Shell commands that run without asking:",
+                com.intellij.ui.components.JBScrollPane(allowList),
+                true,
+            )
+            .addComponentToRightColumn(
+                com.intellij.ui.components.JBLabel(
+                    "<html>One glob per line, or <code>re:</code> for a regex. A command containing " +
+                        "<code>&amp;&amp;</code>, <code>;</code>, <code>|</code>, a backtick, " +
+                        "<code>$()</code> or a redirection always asks, whatever it matches.</html>"
+                ).apply { componentStyle = com.intellij.util.ui.UIUtil.ComponentStyle.SMALL },
+            )
             .addComponentFillVertically(javax.swing.JPanel(), 0)
             .panel
         root = panel
@@ -42,8 +55,12 @@ class TurboFieldfareConfigurable : Configurable {
         return hostField.text != state.host ||
             portField.text != state.port.toString() ||
             modelField.text != state.modelId ||
-            planModeDefault.isSelected != state.planModeDefaultOnNewSession
+            planModeDefault.isSelected != state.planModeDefaultOnNewSession ||
+            parsedAllowList() != state.shellAllowList
     }
+
+    private fun parsedAllowList(): MutableList<String> =
+        allowList.text.lines().map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
 
     override fun apply() {
         val host = hostField.text.trim()
@@ -62,6 +79,7 @@ class TurboFieldfareConfigurable : Configurable {
         state.port = port
         state.modelId = modelField.text.trim()
         state.planModeDefaultOnNewSession = planModeDefault.isSelected
+        state.shellAllowList = parsedAllowList()
     }
 
     override fun reset() {
@@ -70,5 +88,6 @@ class TurboFieldfareConfigurable : Configurable {
         portField.text = state.port.toString()
         modelField.text = state.modelId
         planModeDefault.isSelected = state.planModeDefaultOnNewSession
+        allowList.text = state.shellAllowList.joinToString("\n")
     }
 }

@@ -12,9 +12,11 @@ import dev.turbofieldfare.plugin.client.TurboFieldfareClient
 import dev.turbofieldfare.plugin.planmode.PlanModeState
 import dev.turbofieldfare.plugin.planmode.PlanModeStateMachine
 import dev.turbofieldfare.plugin.settings.TurboFieldfareSettings
-import dev.turbofieldfare.plugin.tools.ALL_TOOLS
 import dev.turbofieldfare.plugin.tools.LoopEvent
+import dev.turbofieldfare.plugin.tools.ShellApprover
 import dev.turbofieldfare.plugin.tools.ToolExecutor
+import dev.turbofieldfare.plugin.tools.allTools
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -149,7 +151,7 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
 
         val configuredModel = TurboFieldfareSettings.getInstance().state.modelId.ifBlank { null }
         val model = configuredModel ?: serverModel ?: FALLBACK_MODEL
-        val executor = ToolExecutor(project, session, ALL_TOOLS, planMode)
+        val executor = ToolExecutor(project, session, allTools(approver), planMode)
 
         generation = scope.launch {
             try {
@@ -163,6 +165,21 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
                 }
             }
         }
+    }
+
+    /**
+     * Shows an approval card and suspends until the user picks one of the two
+     * buttons. Nothing else completes the deferred, so silence is never approval;
+     * if the panel is disposed while waiting, the scope is cancelled and the tool
+     * call is abandoned rather than allowed.
+     */
+    private val approver = ShellApprover { command, reason ->
+        val decision = CompletableDeferred<Boolean>()
+        withContext(Dispatchers.EDT) {
+            transcript.addCard(ShellApprovalCard(command, reason) { approved -> decision.complete(approved) })
+            scrollToBottom()
+        }
+        decision.await()
     }
 
     private fun render(event: LoopEvent) {

@@ -71,7 +71,7 @@ object ProposeEditTool : Tool {
         )
     }
 
-    override fun execute(project: Project, arguments: JsonObject): String {
+    override suspend fun execute(project: Project, arguments: JsonObject): String {
         val relative = arguments.stringOrNull("path")
             ?: return "Error: missing required argument \"path\"."
         arguments.stringOrNull("new_content")

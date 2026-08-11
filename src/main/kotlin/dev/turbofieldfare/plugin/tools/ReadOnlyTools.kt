@@ -37,7 +37,7 @@ object ReadFileTool : Tool {
         required = listOf("path"),
     )
 
-    override fun execute(project: Project, arguments: JsonObject): String {
+    override suspend fun execute(project: Project, arguments: JsonObject): String {
         val relative = arguments.string("path") ?: return "Error: missing required argument \"path\"."
         val path = ProjectFiles.resolve(project, relative)
             ?: return "Error: \"$relative\" is outside the open project. Only files inside the project can be read."
@@ -69,7 +69,7 @@ object ListFilesTool : Tool {
         required = listOf("path"),
     )
 
-    override fun execute(project: Project, arguments: JsonObject): String {
+    override suspend fun execute(project: Project, arguments: JsonObject): String {
         val relative = arguments.string("path") ?: "."
         val dir = ProjectFiles.resolve(project, relative)
             ?: return "Error: \"$relative\" is outside the open project."
@@ -101,7 +101,7 @@ object SearchInFilesTool : Tool {
         required = listOf("query"),
     )
 
-    override fun execute(project: Project, arguments: JsonObject): String {
+    override suspend fun execute(project: Project, arguments: JsonObject): String {
         val query = arguments.string("query") ?: return "Error: missing required argument \"query\"."
         val relative = arguments.string("path") ?: "."
         val root = ProjectFiles.resolve(project, relative)
@@ -155,8 +155,9 @@ object SearchInFilesTool : Tool {
 val READ_ONLY_TOOLS: List<Tool> = listOf(ReadFileTool, ListFilesTool, SearchInFilesTool)
 
 /**
- * Every tool offered to the model. Effectful ones are included in Plan mode too:
+ * Every tool offered to the model. Effectful ones are offered in Plan mode too:
  * the gate refuses them at call time, which lets the model propose a change and
  * the user see the proposal, instead of the model not knowing edits exist.
  */
-val ALL_TOOLS: List<Tool> = READ_ONLY_TOOLS + ProposeEditTool
+fun allTools(approver: ShellApprover): List<Tool> =
+    READ_ONLY_TOOLS + ProposeEditTool + RunShellCommandTool(approver)

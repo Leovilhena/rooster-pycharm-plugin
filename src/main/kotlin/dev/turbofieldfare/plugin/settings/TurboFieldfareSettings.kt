@@ -17,6 +17,16 @@ class TurboFieldfareState {
 
     /** New chat sessions start in Plan mode; only a human click leaves it. */
     var planModeDefaultOnNewSession: Boolean = true
+
+    /**
+     * Shell commands that may run without asking, as globs (or `re:` regexes).
+     *
+     * Pre-populated with read-only commands only. Anything containing a shell
+     * metacharacter is refused regardless of what it matches — see
+     * [dev.turbofieldfare.plugin.shell.ShellAllowListMatcher].
+     */
+    var shellAllowList: MutableList<String> =
+        dev.turbofieldfare.plugin.shell.ShellAllowListMatcher.SAFE_DEFAULTS.toMutableList()
 }
 
 /**

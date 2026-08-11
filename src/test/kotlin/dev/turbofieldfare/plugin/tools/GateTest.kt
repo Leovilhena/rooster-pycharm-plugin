@@ -21,7 +21,7 @@ class GateTest {
     ) : Tool {
         override val description = "fake"
         override val parameters: JsonObject = objectSchema(required = emptyList())
-        override fun execute(project: Project, arguments: JsonObject) = "ran"
+        override suspend fun execute(project: Project, arguments: JsonObject) = "ran"
     }
 
     private val readOnly = FakeTool("read_only", effectful = false)

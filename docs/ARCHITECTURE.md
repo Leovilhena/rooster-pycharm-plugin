@@ -96,6 +96,32 @@ arguments, no patch dialect for the model to get subtly wrong, and the diff is
 computed here from the real file instead of trusted from the model. The cost is
 tokens, which is the right thing to spend to remove a class of silent corruption.
 
+## Shell commands
+
+`run_shell_command` is gated twice: `effectful = true` means Plan mode refuses it
+outright, and in Act mode it still only runs if the allow-list auto-approves it
+or the user clicks Approve on a card.
+
+`ShellAllowListMatcher` applies its two rules **in this order**:
+
+1. **Any shell metacharacter disqualifies the command**, before any pattern is
+   considered — `&& || ; | &` , backtick, `$(`, `${`, `>`, `<`, newline. Commands
+   run through `/bin/sh -c`, so `git status && rm -rf ~` is two commands and a
+   `git status*` pattern matches the whole string. Checking the pattern first
+   would auto-approve the `rm`.
+2. Only then, the command must match a user pattern (glob, or `re:` regex; a
+   malformed regex matches nothing rather than everything).
+
+Failing either rule is not a refusal — it falls through to a manual approval
+card. The cost of a false negative is one click; the cost of a false positive is
+arbitrary code execution requested by a 4B model. Shipped defaults are read-only
+commands only, and a unit test asserts none of them mentions `rm`, `curl`,
+`install`, `sudo`, and friends.
+
+Approval suspends the tool loop on a `CompletableDeferred` that only the two
+buttons complete. Silence is never approval; disposing the panel cancels the
+scope and abandons the call.
+
 ## Applying an edit
 
 `FileEditApplier` writes through the **Document** inside a single
@@ -164,7 +190,7 @@ tomorrow.
 | 4. Read-only tools + tool loop | done |
 | 5. Plan/Act + ProposeEdit (preview only) | done |
 | 6. Act-mode edit execution + undo | done |
-| 7. Shell tool + allow-list | not started |
+| 7. Shell tool + allow-list | done |
 | 8. Inline completion | not started |
 | 9. Polish | not started |
 

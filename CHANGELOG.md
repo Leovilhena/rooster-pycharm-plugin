@@ -40,3 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In Act mode, **Apply** writes the proposed change through the IDE's document
   and undo stack: an open editor updates in place, and a single Cmd+Z reverts the
   whole edit.
+- `run_shell_command`, with an approval card. Commands matching the allow-list
+  run straight away; anything else asks first, and the card shows the command
+  verbatim plus why it was not auto-approved. Refused in Plan mode entirely.
+- Shell allow-list in Settings, pre-filled with read-only commands
+  (`git status*`, `ls*`, `cat *`, …). Any command containing a shell
+  metacharacter always asks, whatever it matches — `git status && rm -rf ~`
+  cannot ride in on a `git status*` rule.
