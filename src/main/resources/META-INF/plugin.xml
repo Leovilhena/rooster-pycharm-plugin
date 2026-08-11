@@ -1,0 +1,22 @@
+<idea-plugin>
+    <id>dev.turbofieldfare.plugin</id>
+    <name>TurboFieldfare</name>
+    <vendor>leovilhena</vendor>
+
+    <description><![CDATA[
+        Offline AI assistant for PyCharm, backed by a local
+        <a href="https://github.com/">TurboFieldfare</a> server on 127.0.0.1.
+        Chat, read-only repo tools, gated file edits and shell commands, and
+        opt-in inline completion &mdash; nothing leaves the machine.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.python</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="TurboFieldfare"
+                    anchor="right"
+                    icon="AllIcons.Toolwindows.ToolWindowMessages"
+                    factoryClass="dev.turbofieldfare.plugin.ui.TurboFieldfareToolWindowFactory"/>
+    </extensions>
+</idea-plugin>
