@@ -65,6 +65,13 @@ tasks.test {
     useJUnitPlatform()
 }
 
+// Launches a whole IDE to index the settings UI for the Settings search box.
+// Not worth a minute of every build, and it cannot run while a sandbox IDE is
+// open ("Only one instance of PyCharm can be run at a time").
+tasks.buildSearchableOptions {
+    enabled = false
+}
+
 // `./gradlew runIde -PrunIdeProject=/path/to/project` opens that project in the
 // sandbox IDE, so manual phase verification doesn't start from the welcome screen.
 tasks.named<org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask>("runIde") {

@@ -27,6 +27,23 @@ class TurboFieldfareState {
      */
     var shellAllowList: MutableList<String> =
         dev.turbofieldfare.plugin.shell.ShellAllowListMatcher.SAFE_DEFAULTS.toMutableList()
+
+    /**
+     * Inline ghost-text completion. **Off by default.**
+     *
+     * At the ~5 tok/s this hardware decodes at (and a documented ~54s cold start),
+     * as-you-type completion arrives after the user has already typed past it. Opt
+     * in knowingly, or leave [completionAutomatic] off and trigger it by hand.
+     */
+    var completionEnabled: Boolean = false
+
+    /** When false, completions only appear on an explicit trigger, never while typing. */
+    var completionAutomatic: Boolean = false
+
+    var completionDebounceMs: Int = 700
+
+    /** Small on purpose: a long completion is a long wait for something usually wrong. */
+    var completionMaxTokens: Int = 64
 }
 
 /**

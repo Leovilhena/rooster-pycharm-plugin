@@ -47,3 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`git status*`, `ls*`, `cat *`, …). Any command containing a shell
   metacharacter always asks, whatever it matches — `git status && rm -rf ~`
   cannot ride in on a `git status*` rule.
+- Inline ghost-text completion from the local model, **off by default**, with a
+  separate switch for suggesting while typing and a configurable debounce.
+  Suggestions insert with Tab; continued typing cancels the in-flight request
+  rather than queuing it.

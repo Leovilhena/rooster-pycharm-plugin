@@ -15,6 +15,9 @@ class TurboFieldfareConfigurable : Configurable {
     private val modelField = JBTextField()
     private val planModeDefault = JBCheckBox("New chats start in Plan mode")
     private val allowList = com.intellij.ui.components.JBTextArea(8, 40)
+    private val completionEnabled = JBCheckBox("Enable inline completion (off by default — slow on this hardware)")
+    private val completionAutomatic = JBCheckBox("Suggest automatically while typing (otherwise only on explicit trigger)")
+    private val completionDebounce = JBTextField()
 
     private var root: JComponent? = null
 
@@ -43,6 +46,9 @@ class TurboFieldfareConfigurable : Configurable {
                         "<code>$()</code> or a redirection always asks, whatever it matches.</html>"
                 ).apply { componentStyle = com.intellij.util.ui.UIUtil.ComponentStyle.SMALL },
             )
+            .addComponent(completionEnabled)
+            .addComponent(completionAutomatic)
+            .addLabeledComponent("Completion debounce (ms):", completionDebounce)
             .addComponentFillVertically(javax.swing.JPanel(), 0)
             .panel
         root = panel
@@ -56,7 +62,10 @@ class TurboFieldfareConfigurable : Configurable {
             portField.text != state.port.toString() ||
             modelField.text != state.modelId ||
             planModeDefault.isSelected != state.planModeDefaultOnNewSession ||
-            parsedAllowList() != state.shellAllowList
+            parsedAllowList() != state.shellAllowList ||
+            completionEnabled.isSelected != state.completionEnabled ||
+            completionAutomatic.isSelected != state.completionAutomatic ||
+            completionDebounce.text != state.completionDebounceMs.toString()
     }
 
     private fun parsedAllowList(): MutableList<String> =
@@ -80,6 +89,10 @@ class TurboFieldfareConfigurable : Configurable {
         state.modelId = modelField.text.trim()
         state.planModeDefaultOnNewSession = planModeDefault.isSelected
         state.shellAllowList = parsedAllowList()
+        state.completionEnabled = completionEnabled.isSelected
+        state.completionAutomatic = completionAutomatic.isSelected
+        state.completionDebounceMs = completionDebounce.text.trim().toIntOrNull()?.coerceIn(0, 10_000)
+            ?: throw ConfigurationException("Debounce must be a number of milliseconds.", "Invalid debounce")
     }
 
     override fun reset() {
@@ -89,5 +102,8 @@ class TurboFieldfareConfigurable : Configurable {
         modelField.text = state.modelId
         planModeDefault.isSelected = state.planModeDefaultOnNewSession
         allowList.text = state.shellAllowList.joinToString("\n")
+        completionEnabled.isSelected = state.completionEnabled
+        completionAutomatic.isSelected = state.completionAutomatic
+        completionDebounce.text = state.completionDebounceMs.toString()
     }
 }

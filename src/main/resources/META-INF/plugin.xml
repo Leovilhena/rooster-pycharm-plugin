@@ -21,6 +21,8 @@
                 id="dev.turbofieldfare.settings"
                 displayName="TurboFieldfare"
                 instance="dev.turbofieldfare.plugin.settings.TurboFieldfareConfigurable"/>
+        <inline.completion.provider
+                implementation="dev.turbofieldfare.plugin.completion.TurboFieldfareInlineCompletionProvider"/>
         <toolWindow id="TurboFieldfare"
                     anchor="right"
                     icon="AllIcons.Toolwindows.ToolWindowMessages"

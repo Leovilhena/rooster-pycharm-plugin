@@ -69,6 +69,24 @@ that matters is deterministic Kotlin.
 An unreachable server is a value (`ServerStatus.Down`), never an exception: the
 user not having started the server yet is the single most common state.
 
+## Inline completion
+
+`TurboFieldfareInlineCompletionProvider` extends the platform's
+`DebouncedInlineCompletionProvider` and is registered on the
+`com.intellij.inline.completion.provider` extension point (verified against the
+installed PyCharm CE 2025.2.5 SDK, not assumed).
+
+It is a deliberately separate, simpler path from the chat tool loop: short
+context (1500 chars before the caret, 300 after), a small token budget, no
+tools, and **no contact with the Plan/Act state machine**. The only thing it can
+do is offer text the user must press Tab to accept, so it needs none of the
+chat side's gating — and wiring any in would invite it to grow some.
+
+**Off by default**, with a second switch for "automatically while typing" that
+is also off: at ~5 tok/s a suggestion arrives after the user has typed past it.
+Cancellation is the platform's — a keystroke cancels the coroutine, which
+cancels the flow, which closes the HTTP response and stops the server.
+
 ## Plan/Act, and where it is enforced
 
 Two states, `PLAN` and `ACT`, held by a project-level `PlanModeStateMachine`.
@@ -191,7 +209,7 @@ tomorrow.
 | 5. Plan/Act + ProposeEdit (preview only) | done |
 | 6. Act-mode edit execution + undo | done |
 | 7. Shell tool + allow-list | done |
-| 8. Inline completion | not started |
+| 8. Inline completion | done |
 | 9. Polish | not started |
 
 ## Known Deviations from Plan
