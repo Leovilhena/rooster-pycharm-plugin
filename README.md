@@ -27,6 +27,13 @@ says so and does nothing.
   before anything is written, and apply it with one click and one undo.
 - **Runs shell commands**, either from your allow-list or with a per-command
   approval card.
+- **Remembers things across sessions.** Markdown files under
+  `.turbofieldfare/memory/` in your project, or in the IDE config directory for
+  facts that apply everywhere. Each new chat loads a short index of topic titles
+  and fetches a topic in full only when it needs one. The assistant can propose
+  writing a memory, but it appears as the same diff card an edit does and
+  nothing is saved until you click Apply. Write the files by hand if you prefer
+  — the plugin reads whatever is there.
 - **Inline ghost-text completion**, off by default (see below).
 
 ## Safety model
