@@ -6,9 +6,9 @@ import java.nio.file.Path
 /**
  * Where memory that applies to *every* project lives.
  *
- * `<PathManager.getConfigPath()>/turbofieldfare/memory/<slug>.md` — the same
+ * `<PathManager.getConfigPath()>/rooster/memory/<slug>.md` — the same
  * application-scoped config directory `RoosterSettings` already persists
- * into (as `options/turbofieldfare.xml`). Global rather than per-project for the
+ * into (as `options/rooster.xml`). Global rather than per-project for the
  * same reason the settings are: it describes this user on this machine, and
  * re-recording "prefers early returns" once per project is exactly the friction
  * the feature exists to remove.
@@ -34,5 +34,5 @@ object GlobalMemory {
     fun resolve(root: Path, slug: String): Path? =
         if (isValidSlug(slug)) root.resolve("$slug.md") else null
 
-    private const val DIRECTORY = "turbofieldfare"
+    private const val DIRECTORY = "rooster"
 }

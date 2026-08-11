@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Kotlin package moved from `dev.turbofieldfare.plugin` to `dev.rooster.plugin`
   and the classes named after the old brand moved with it — an internal change
   with no behaviour attached.
+- **The rename moves state, and nothing migrates it.** Settings now persist to
+  `rooster.xml` instead of `turbofieldfare.xml`, the tool window has a new id
+  (so its position and visibility reset once), and memory now lives under
+  `.rooster/memory/` in a project and `rooster/memory/` in the IDE config
+  directory. Existing settings fall back to defaults and existing memory files
+  need moving by hand. Nothing has been released yet, so this affects only a
+  development sandbox.
 - Inline completion now only fires for Python and shell files (`py`, `pyi`,
   `sh`, `bash`, `zsh`) — every other file type skips the request entirely.
   The extension check is a pure function, `isSupportedCompletionExtension`,
@@ -37,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   transcript says how many topics were loaded. A fresh install with no memory
   files sends nothing at all.
 - `read_memory_file`: the assistant can read a memory topic in full — a markdown
-  file under `.turbofieldfare/memory/` in the project, or the same directory in
+  file under `.rooster/memory/` in the project, or the same directory in
   the IDE config directory for facts that apply to every project. Read-only, so
   it works in Plan mode too. Files can be written by hand in your own editor;
   the plugin does not need to have created them.

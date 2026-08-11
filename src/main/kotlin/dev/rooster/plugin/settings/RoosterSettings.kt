@@ -64,7 +64,7 @@ class RoosterState {
  */
 @State(
     name = "RoosterSettings",
-    storages = [Storage("turbofieldfare.xml")],
+    storages = [Storage("rooster.xml")],
 )
 class RoosterSettings : PersistentStateComponent<RoosterState> {
 

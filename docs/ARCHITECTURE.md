@@ -186,13 +186,13 @@ the model; there is no fallback path.
 
 Persistent facts that survive across chat sessions, in two independent scopes:
 
-- **Project** — `<project root>/.turbofieldfare/memory/<slug>.md`, resolved by the
+- **Project** — `<project root>/.rooster/memory/<slug>.md`, resolved by the
   existing `ProjectFiles.resolve()`. It is just another project-relative path;
   no new confinement logic exists for it.
-- **Global** — `<PathManager.getConfigPath()>/turbofieldfare/memory/<slug>.md`.
+- **Global** — `<PathManager.getConfigPath()>/rooster/memory/<slug>.md`.
   That is the same config directory `RoosterSettings` persists into
   (verified on this machine: the settings file is at
-  `…/PC-2025.2.5/config/options/turbofieldfare.xml`, and `getOptionsPath()` is
+  `…/PC-2025.2.5/config/options/rooster.xml`, and `getOptionsPath()` is
   `getConfigPath() + "/options"`, so the memory directory sits beside it). It is
   outside every project root, so `ProjectFiles` cannot confine it — see below.
 
@@ -346,7 +346,7 @@ allowed to say a host is acceptable, and it is applied in **two** places:
 
 1. `RoosterConfigurable.apply()` — the path a human takes, where the
    rejection also has to explain itself.
-2. `RoosterSettings.loadState()` — because `turbofieldfare.xml` is an
+2. `RoosterSettings.loadState()` — because `rooster.xml` is an
    ordinary file a user can hand-edit, and settings on disk are not trusted
    input. A non-loopback host found there is reset to the default.
 
@@ -424,6 +424,16 @@ tomorrow.
   platform fixture this repo does not use. The overload mirrors the one
   `ProjectFiles.resolve` already has, and `FileEditApplierTest` covers both
   branches through it.
+- **The rename to Rooster drops the state it used to read, on purpose.** The
+  settings file moved from `turbofieldfare.xml` to `rooster.xml`, the tool
+  window id from `TurboFieldfare` to `Rooster`, and both memory directories
+  from `turbofieldfare`/`.turbofieldfare` to `rooster`/`.rooster`. Nothing
+  migrates. What is lost is two booleans in a sandbox, a remembered window
+  position, and a memory directory that exists on exactly one machine — all
+  reconfigured in less time than reviewing the migration code would take, and
+  the plugin has never been released, so no one else has any of it. Migration
+  code for a pre-release single-machine state is a permanent maintenance
+  liability bought with a one-time inconvenience.
 - **Toolchain JDK is PyCharm's bundled JBR 21**, rather than a
   `brew install openjdk@21`. Reason: it is a real JDK 21, already on disk, and
   exactly the runtime the plugin will actually run on.

@@ -39,10 +39,10 @@ class GlobalMemoryTest {
         // "unifies" the two has to break this test first.
         val projectRoot = Files.createTempDirectory("tff-project").toRealPath()
 
-        val resolved = ProjectFiles.resolve(projectRoot, ".turbofieldfare/memory/testing-conventions.md")
+        val resolved = ProjectFiles.resolve(projectRoot, ".rooster/memory/testing-conventions.md")
 
         assertNotNull(resolved)
         assertTrue(resolved.startsWith(projectRoot))
-        assertNull(ProjectFiles.resolve(projectRoot, ".turbofieldfare/memory/../../../escape.md"))
+        assertNull(ProjectFiles.resolve(projectRoot, ".rooster/memory/../../../escape.md"))
     }
 }

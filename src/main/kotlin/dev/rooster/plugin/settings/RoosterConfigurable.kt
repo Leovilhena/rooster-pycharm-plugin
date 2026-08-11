@@ -23,7 +23,7 @@ class RoosterConfigurable : Configurable {
 
     private var root: JComponent? = null
 
-    override fun getDisplayName(): String = "TurboFieldfare"
+    override fun getDisplayName(): String = "Rooster"
 
     override fun createComponent(): JComponent {
         val panel = FormBuilder.createFormBuilder()

@@ -69,7 +69,7 @@ class FileEditApplierTest {
         assertNull(
             FileEditApplier.resolve(
                 projectRoot, globalRoot,
-                preview(".turbofieldfare/memory/topic.md", PathScope.GlobalMemory),
+                preview(".rooster/memory/topic.md", PathScope.GlobalMemory),
             ),
         )
         assertEquals(

@@ -8,7 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /** Where project-scoped memory lives, relative to the project root. */
-internal const val PROJECT_MEMORY_DIR = ".turbofieldfare/memory"
+internal const val PROJECT_MEMORY_DIR = ".rooster/memory"
 
 /**
  * A memory topic is short by construction; a long one should have been split.
