@@ -20,7 +20,9 @@ dependencies {
         // to avoid a ~1GB SDK download on this 8GB machine. CI has no local install, so
         // it falls back to the standard downloadable artifact instead.
         if (providers.environmentVariable("CI").isPresent) {
-            pycharmCommunity("2025.2.5")
+            // The marketing version string ("2025.2.5") fails to resolve a download
+            // URL via this helper; the exact build number does.
+            pycharmCommunity("252.28238.29")
         } else {
             local(providers.gradleProperty("platformLocalPath"))
         }
