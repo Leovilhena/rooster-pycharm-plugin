@@ -96,6 +96,18 @@ arguments, no patch dialect for the model to get subtly wrong, and the diff is
 computed here from the real file instead of trusted from the model. The cost is
 tokens, which is the right thing to spend to remove a class of silent corruption.
 
+## Applying an edit
+
+`FileEditApplier` writes through the **Document** inside a single
+`WriteCommandAction`, never through `java.nio`. That is what makes one Cmd+Z
+revert the whole edit, keeps an open editor tab in sync instead of showing stale
+text, and puts the change on the IDE's own undo stack. It re-checks project
+confinement even though the gate already ran — it is the last code before bytes
+reach the disk, and the check is free.
+
+It is called from exactly one place: the Apply button on a proposal card, which
+only exists enabled when the gate allowed the edit.
+
 ## Tool loop
 
 `ToolExecutor.run()` is the whole agentic loop; the server has none. One
@@ -151,7 +163,7 @@ tomorrow.
 | 3. Settings | done |
 | 4. Read-only tools + tool loop | done |
 | 5. Plan/Act + ProposeEdit (preview only) | done |
-| 6. Act-mode edit execution + undo | not started |
+| 6. Act-mode edit execution + undo | done |
 | 7. Shell tool + allow-list | not started |
 | 8. Inline completion | not started |
 | 9. Polish | not started |
@@ -160,6 +172,13 @@ tomorrow.
 
 - **Platform dependency is `local(...)`, not a downloaded `pycharmCommunity(...)`.**
   Reason: disk and bandwidth on this machine; the target IDE is installed already.
+- **`FileEditApplier` has no `BasePlatformTestCase`.** The plan called for
+  IntelliJ test fixtures here. Adding `testFramework(TestFrameworkType.Platform)`
+  broke the plain-JUnit test runtime (the platform's JUnit5 session listener
+  fails to instantiate), and the cost of unpicking that outweighed the coverage:
+  the behaviour that matters — edit applies, one Cmd+Z reverts it completely, the
+  file on disk matches its original checksum afterwards — is on the manual
+  checklist and was verified that way.
 - **Toolchain JDK is PyCharm's bundled JBR 21**, rather than a
   `brew install openjdk@21`. Reason: it is a real JDK 21, already on disk, and
   exactly the runtime the plugin will actually run on.

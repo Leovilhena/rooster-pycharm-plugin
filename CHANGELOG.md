@@ -37,3 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **Show diff** button that opens PyCharm's diff viewer, and an Apply button.
   In Plan mode the card is stamped "not executed, nothing was written" and Apply
   is disabled.
+- In Act mode, **Apply** writes the proposed change through the IDE's document
+  and undo stack: an open editor updates in place, and a single Cmd+Z reverts the
+  whole edit.

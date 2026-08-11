@@ -8,6 +8,8 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import dev.turbofieldfare.plugin.edit.ApplyResult
+import dev.turbofieldfare.plugin.edit.FileEditApplier
 import dev.turbofieldfare.plugin.tools.EditPreview
 import java.awt.BorderLayout
 import java.awt.FlowLayout
@@ -26,8 +28,10 @@ class EditProposalCard(
     private val project: Project,
     private val preview: EditPreview,
     private val blocked: Boolean,
-    private val onApply: (() -> Unit)? = null,
 ) : JPanel(BorderLayout()) {
+
+    private val stampLabel = JBLabel(stamp())
+    private val applyButton = JButton("Apply")
 
     init {
         border = JBUI.Borders.compound(
@@ -40,7 +44,7 @@ class EditProposalCard(
             border = JBUI.Borders.empty(6, 8, 2, 8)
             add(JBLabel(title()))
             add(JBLabel(summary()).apply { componentStyle = UIUtil.ComponentStyle.SMALL })
-            add(JBLabel(stamp()).apply {
+            add(stampLabel.apply {
                 componentStyle = UIUtil.ComponentStyle.SMALL
                 foreground = if (blocked) JBColor.GRAY else JBColor.foreground()
             })
@@ -48,10 +52,10 @@ class EditProposalCard(
 
         val buttons = JPanel(FlowLayout(FlowLayout.LEFT, 6, 4)).apply {
             add(JButton("Show diff").apply { addActionListener { showDiff() } })
-            add(JButton("Apply").apply {
-                isEnabled = !blocked && onApply != null
+            add(applyButton.apply {
+                isEnabled = !blocked
                 toolTipText = if (blocked) "Switch to Act mode to apply changes" else null
-                addActionListener { onApply?.invoke() }
+                addActionListener { onApply() }
             })
         }
 
@@ -66,6 +70,27 @@ class EditProposalCard(
 
     private fun stamp(): String =
         if (blocked) "Plan mode — not executed. Nothing was written." else "Not applied yet."
+
+    /**
+     * Applying is a human action: this runs because the user clicked Apply on a
+     * card the gate already allowed. Nothing the model emits can reach it.
+     */
+    private fun onApply() {
+        when (val result = FileEditApplier.apply(project, preview)) {
+            is ApplyResult.Applied -> {
+                applyButton.isEnabled = false
+                stampLabel.text = "Applied. Undo (Cmd+Z) in the editor reverts it in one step."
+                stampLabel.foreground = JBColor.foreground()
+            }
+
+            is ApplyResult.Failed -> {
+                stampLabel.text = "Not applied: ${result.message}"
+                stampLabel.foreground = JBColor.RED
+            }
+        }
+        revalidate()
+        repaint()
+    }
 
     private fun showDiff() {
         val factory = DiffContentFactory.getInstance()
