@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   directory. Existing settings fall back to defaults and existing memory files
   need moving by hand. Nothing has been released yet, so this affects only a
   development sandbox.
+- The GitHub repository is now `Leovilhena/rooster-pycharm-plugin`. GitHub
+  redirects the old URL, so existing clones keep working, but it is worth
+  updating the remote.
 - Inline completion now only fires for Python and shell files (`py`, `pyi`,
   `sh`, `bash`, `zsh`) — every other file type skips the request entirely.
   The extension check is a pure function, `isSupportedCompletionExtension`,
