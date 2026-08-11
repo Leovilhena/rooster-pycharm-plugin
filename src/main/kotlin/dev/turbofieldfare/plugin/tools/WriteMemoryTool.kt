@@ -84,7 +84,7 @@ object WriteMemoryTool : Tool {
     }
 
     /** The on-disk format: a deterministic title line, then the model's body. */
-    private fun body(title: String, content: String): String {
+    internal fun body(title: String, content: String): String {
         val trimmed = content.trim()
         return "# $title\n\n$trimmed\n"
     }

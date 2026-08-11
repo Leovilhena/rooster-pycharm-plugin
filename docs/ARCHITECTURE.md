@@ -310,6 +310,18 @@ Both branches are covered by `FileEditApplierTest` through a root-relative
 overload, the same testability trick `ProjectFiles` and `GlobalMemory` use — a
 check that cannot be tested is a check nobody notices losing.
 
+`MemoryRoundTripTest` covers everything on either side of the Document write:
+the bytes the tool produces, where they land, and that the next session's index
+and `read_memory_file` both agree with them. A write that saved correctly but
+indexed under a different title, or under a name the read tool cannot ask for,
+is the failure that test exists to catch.
+
+**Still unverified by hand:** clicking Apply on a *global* memory card. The
+write goes through `VfsUtil.createDirectories` and `FileDocumentManager` on a
+path in the IDE's own config directory rather than in a project, and that
+specific combination has not been exercised against a running IDE. The
+project-scope path is the one `propose_edit` has always used.
+
 ### Budget
 
 The index is capped at `MemoryIndex.MAX_INDEX_CHARS` (~2000 chars, ~500 tokens
@@ -358,7 +370,7 @@ tomorrow.
 | M3. `read_memory_file` | done |
 | M4. Index injection | done |
 | M5. `write_memory` preview (Plan mode) | done |
-| M6. `write_memory` apply (Act mode) | not started |
+| M6. `write_memory` apply (Act mode) | code complete; Apply click-through pending |
 | M7. Context-budget check | not started |
 
 ## Error messages and budgets
