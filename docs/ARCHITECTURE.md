@@ -245,3 +245,57 @@ tomorrow.
 - **Toolchain JDK is PyCharm's bundled JBR 21**, rather than a
   `brew install openjdk@21`. Reason: it is a real JDK 21, already on disk, and
   exactly the runtime the plugin will actually run on.
+
+## Roadmap
+
+Not built yet; captured here so the design thinking isn't lost before it is.
+
+### Memory
+
+A flat, curated file (or a small set of them) loaded into the system prompt
+alongside a chat session — the same pattern this project's own development
+tooling uses for itself. Deliberately **not** a vector DB/RAG/embeddings
+setup: the corpus (user preferences, project facts, prior decisions) stays
+small by construction, so semantic retrieval buys nothing a full read
+wouldn't, while costing a local embedding model's RAM on a machine already
+spending 2GB on Gemma4, an index to keep fresh, and a weaker model's ability
+to judge which retrieved chunk is actually relevant. Skip RAG here unless the
+memory corpus itself grows past what fits in context — it hasn't, and
+shouldn't be allowed to by design (curated, not accumulated).
+
+### MCP client (library ingestion + fetch_url)
+
+Two existing MCP servers — `library` (ingests programming books) and
+`fetch_url` (fetches Python docs, PyPI pages, etc.) — are candidates for
+wiring into the tool loop. TurboFieldfareServer already speaks OpenAI-style
+function-calling, which is structurally compatible with MCP tool shapes; the
+actual gap is that nothing today translates between the two. The work is an
+adapter inside `tools/ToolExecutor`: connect to each MCP server, call
+`tools/list` to discover its tools, convert each tool's JSON Schema into the
+function-tool schema sent to the model, and on a matching `tool_call`, proxy
+to the real MCP server and return its result as the tool message.
+
+Design constraints to resolve before building, not after:
+
+- **Context budget.** Every exposed tool's schema costs tokens on *every*
+  request against a 16K window, whether or not it's used that turn. Expose a
+  small, tightly-described tool surface rather than everything both servers
+  offer.
+- **Result truncation.** A fetched docs page or an ingested book chunk can be
+  large. Needs the same kind of cap `shell/` already applies to command
+  output (4000 chars) — uncapped, one tool call could blow the context.
+  RAG genuinely earns its keep *inside* the `library` MCP server itself
+  (a book corpus doesn't fit in context no matter how it's phrased) — that's
+  a different problem from plugin-side memory, see above.
+- **Safety gating.** `fetch_url` reaching arbitrary URLs and `library`
+  presumably writing an index/cache are both effectful in the same sense
+  `RunShellCommand` is. They should route through the same `PlanModeStateMachine`
+  gate — blocked in Plan mode, approved/allow-listed in Act mode — not get a
+  free pass because they arrived via MCP instead of a built-in tool.
+- **Schema compatibility.** TurboFieldfareServer 400s on `oneOf`/`allOf`/mixed-type
+  unions in tool schemas (see `docs/OPENAI_SERVER.md` upstream). Check both
+  MCP servers' actual tool schemas against that constraint before assuming
+  they pass through unmodified — they may need reshaping.
+- **Process lifecycle.** MCP servers are typically separate processes (stdio).
+  The plugin would own starting them when needed and stopping them on IDE
+  close — new operational surface beyond anything that exists today.
