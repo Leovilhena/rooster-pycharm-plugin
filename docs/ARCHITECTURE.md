@@ -327,8 +327,16 @@ project-scope path is the one `propose_edit` has always used.
 The index is capped at `MemoryIndex.MAX_INDEX_CHARS` (~2000 chars, ~500 tokens
 on the existing chars/4 estimate, ~3% of a 16K window) with an "N more topics
 not shown" note past it, so a hand-filled directory cannot silently evict the
-user's question. Because the index is just message 0, the existing 75% context
-warning already accounts for it with no change.
+user's question. A realistic two-topic index measured ~380 characters, ~95
+tokens — under 1% of the window.
+
+**No new budget logic.** The index is an ordinary message in `ChatSession`, so
+`approximateTokens()` counts it and the existing 75% warning already accounts
+for it. That is load-bearing rather than incidental: an index carried outside
+the session, or injected at request time, would be spent but invisible, and the
+warning would fire late on exactly the conversations where memory made things
+tight. `MemoryContextBudgetTest` pins it — the index-carrying session's estimate
+exceeds an identical one without it by precisely the index's own cost.
 
 ## Settings and the localhost rule
 
@@ -371,7 +379,7 @@ tomorrow.
 | M4. Index injection | done |
 | M5. `write_memory` preview (Plan mode) | done |
 | M6. `write_memory` apply (Act mode) | code complete; Apply click-through pending |
-| M7. Context-budget check | not started |
+| M7. Context-budget check | done |
 
 ## Error messages and budgets
 
