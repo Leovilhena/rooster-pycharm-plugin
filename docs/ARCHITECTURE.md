@@ -13,9 +13,9 @@ the code is the bug report.
 | --- | --- |
 | `client/` | `TurboFieldfareClient` — JDK `java.net.http.HttpClient`, streaming SSE; wire-format data classes (Gson) |
 | `chat/` | `ChatSession` — message history for one conversation |
-| `tools/` | Tool definitions (`ReadFile`, `ListFiles`, `SearchInFiles`, `ReadMemoryFile`, `ProposeEdit`, `RunShellCommand`) and `ToolExecutor`, the client-side tool loop |
+| `tools/` | Tool definitions (`ReadFile`, `ListFiles`, `SearchInFiles`, `ReadMemoryFile`, `ProposeEdit`, `WriteMemory`, `RunShellCommand`) and `ToolExecutor`, the client-side tool loop |
 | `planmode/` | `PlanModeStateMachine` — `PLAN` / `ACT`, the enforcement point |
-| `edit/` | `FileEditApplier` — `WriteCommandAction`-wrapped Document edits, undo-grouped |
+| `edit/` | `FileEditApplier` — `WriteCommandAction`-wrapped Document edits, undo-grouped; branches on `PathScope` |
 | `memory/` | `MemorySlug` (topic-name rule), `MemoryIndex` (directory scan → the always-loaded index), `GlobalMemory` (the application-scoped memory root) |
 | `shell/` | `ShellCommandExecutor`, `ShellAllowListMatcher` |
 | `completion/` | Inline ghost-text completion provider (opt-in, off by default) |
@@ -266,6 +266,50 @@ and answered from the returned file on the next turn. The design's one real
 uncertainty — whether a 4B-active-parameter model would use an index it was
 merely handed — is therefore measured rather than assumed.
 
+### Writing
+
+`write_memory(scope, topic, title, content)` is `effectful = true`, so Plan mode
+refuses it through the existing gate with no new gating logic. In Act mode it
+still writes nothing itself: it produces an `EditPreview`, the transcript shows
+the same diff card `propose_edit` uses, and a human clicking Apply is what puts
+bytes on disk. **Every write, project or global, goes through that click.**
+Memory is the last thing that should accumulate silently — a fact the model
+decided to keep, that the user never saw, would shape every later session
+invisibly.
+
+It reuses the *edit* approval pattern, not the *shell* one: a memory write has
+the same risk shape as `propose_edit`, not that of a one-shot irreversible
+external action, so there is no reason to suspend the model's turn waiting for a
+human the way `run_shell_command` does.
+
+The `# Title` line is written by the tool from the separate `title` argument,
+never taken from the body. The index reads that line, so leaving it to model
+discipline would produce index entries that silently disagree with their files.
+
+### `PathScope`, and why the applier branches
+
+`EditPreview` carries a `scope: PathScope` (`Project` by default, so
+`propose_edit` is unchanged). It is not a formatting hint — it selects which
+trust boundary the path is checked against:
+
+| Scope | `relativePath` holds | Checked by |
+| --- | --- | --- |
+| `Project` | a project-relative path | `ProjectFiles.resolve()` — normalise, resolve symlinks, must be under the root |
+| `GlobalMemory` | a bare topic slug | `GlobalMemory.resolve()` — must still validate as a slug |
+
+`FileEditApplier.apply()` branches on that scope to pick the resolver **and
+re-derives the path in both branches, immediately before the write**. It
+deliberately does not accept an already-resolved `Path` from its caller: the
+entire value of this class being the last stop before disk is that it does the
+check itself, and its caller is UI code reacting to a button on a card built
+from model output. A global-scope write that skipped the check would mean a
+crafted "topic" could write anywhere the IDE can reach, with nothing left to
+say no.
+
+Both branches are covered by `FileEditApplierTest` through a root-relative
+overload, the same testability trick `ProjectFiles` and `GlobalMemory` use — a
+check that cannot be tested is a check nobody notices losing.
+
 ### Budget
 
 The index is capped at `MemoryIndex.MAX_INDEX_CHARS` (~2000 chars, ~500 tokens
@@ -313,7 +357,7 @@ tomorrow.
 | M2. Global memory root | done |
 | M3. `read_memory_file` | done |
 | M4. Index injection | done |
-| M5. `write_memory` preview (Plan mode) | not started |
+| M5. `write_memory` preview (Plan mode) | done |
 | M6. `write_memory` apply (Act mode) | not started |
 | M7. Context-budget check | not started |
 
@@ -347,6 +391,19 @@ tomorrow.
   the behaviour that matters — edit applies, one Cmd+Z reverts it completely, the
   file on disk matches its original checksum afterwards — is on the manual
   checklist and was verified that way.
+- **`EditProposalCard` did change, by one method.** The memory plan said the card
+  was already generic over `EditPreview` and needed no edit. It is generic, but a
+  global memory topic's `relativePath` is a bare slug, so the card would have
+  read "New file: prefers-early-returns" with nothing saying the bytes land
+  outside the project in a directory every other project reads. The card is the
+  approval, so it now names the scope. Adding to what an approval discloses is
+  the one direction this change can safely go.
+- **`FileEditApplier.resolve` gained a root-relative overload.** Not in the plan;
+  added because the plan's own emphasis — that the global-scope branch must
+  re-validate rather than be bypassed — was otherwise untestable without a
+  platform fixture this repo does not use. The overload mirrors the one
+  `ProjectFiles.resolve` already has, and `FileEditApplierTest` covers both
+  branches through it.
 - **Toolchain JDK is PyCharm's bundled JBR 21**, rather than a
   `brew install openjdk@21`. Reason: it is a real JDK 21, already on disk, and
   exactly the runtime the plugin will actually run on.

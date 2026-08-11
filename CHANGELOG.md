@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `write_memory`: the assistant can propose remembering something — a project
+  convention, or a preference that applies everywhere. It appears as the same
+  diff card a file edit does, and nothing is saved until you click Apply. In
+  Plan mode it is refused outright, and the card says so. Cards for global
+  memory name the scope, so it is clear when a write lands outside the project.
 - Memory is loaded automatically at the start of each chat: a short index of
   topic names and one-line titles from both scopes, and nothing else. The
   transcript says how many topics were loaded. A fresh install with no memory

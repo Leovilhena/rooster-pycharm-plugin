@@ -11,6 +11,7 @@ import com.intellij.util.ui.UIUtil
 import dev.turbofieldfare.plugin.edit.ApplyResult
 import dev.turbofieldfare.plugin.edit.FileEditApplier
 import dev.turbofieldfare.plugin.tools.EditPreview
+import dev.turbofieldfare.plugin.tools.PathScope
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import javax.swing.BoxLayout
@@ -63,8 +64,21 @@ class EditProposalCard(
         add(buttons, BorderLayout.SOUTH)
     }
 
-    private fun title(): String =
-        if (preview.isNewFile) "New file: ${preview.relativePath}" else "Edit: ${preview.relativePath}"
+    /**
+     * Names the target the way the person approving it needs to read it.
+     *
+     * A global memory topic's `relativePath` is a bare slug — the only thing its
+     * resolver accepts — which on its own gives no hint that Apply writes outside
+     * the project, into a directory every other project will read. Approval has to
+     * state where the bytes go.
+     */
+    private fun title(): String {
+        val verb = if (preview.isNewFile) "New file" else "Edit"
+        return when (preview.scope) {
+            PathScope.Project -> "$verb: ${preview.relativePath}"
+            PathScope.GlobalMemory -> "$verb: global memory / ${preview.relativePath}"
+        }
+    }
 
     private fun summary(): String = "+${preview.addedLines} / -${preview.removedLines} lines"
 

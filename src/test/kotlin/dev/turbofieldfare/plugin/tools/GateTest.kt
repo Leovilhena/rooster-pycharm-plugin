@@ -48,10 +48,23 @@ class GateTest {
     }
 
     @Test
-    fun `the real edit tool is declared effectful`() {
+    fun `the real edit tools are declared effectful`() {
         // A regression here would silently open Plan mode to file writes.
         assertTrue(ProposeEditTool.effectful)
+        // A memory write is a file write. Recording a fact the user never saw would
+        // shape every future session invisibly, which is worse than a normal edit,
+        // not more benign.
+        assertTrue(WriteMemoryTool.effectful)
         READ_ONLY_TOOLS.forEach { assertTrue(!it.effectful, "${it.name} must not be effectful") }
+    }
+
+    @Test
+    fun `an edit preview is project-scoped unless it says otherwise`() {
+        // The default is what keeps propose_edit's behaviour identical: it never
+        // sets a scope, so it can never reach the global-memory resolver.
+        val preview = EditPreview("src/main.py", oldContent = "", newContent = "x", isNewFile = true)
+
+        assertEquals(PathScope.Project, preview.scope)
     }
 
     @Test

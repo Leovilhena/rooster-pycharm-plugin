@@ -6,7 +6,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import dev.turbofieldfare.plugin.memory.GlobalMemory
 import dev.turbofieldfare.plugin.tools.EditPreview
+import dev.turbofieldfare.plugin.tools.PathScope
 import dev.turbofieldfare.plugin.tools.ProjectFiles
 
 /** Outcome of applying a proposed edit. */
@@ -25,14 +27,14 @@ sealed interface ApplyResult {
  * editor and the VFS disagreeing with the disk and give the user nothing to undo.
  *
  * This is called only from the Apply button on a proposal card, which exists only
- * when the gate allowed the edit. It re-checks project confinement anyway: this
- * is the last code before bytes hit the disk, and a check here costs nothing.
+ * when the gate allowed the edit. It re-checks confinement anyway: this is the
+ * last code before bytes hit the disk, and a check here costs nothing.
  */
 object FileEditApplier {
 
     fun apply(project: Project, preview: EditPreview): ApplyResult {
-        val path = ProjectFiles.resolve(project, preview.relativePath)
-            ?: return ApplyResult.Failed("\"${preview.relativePath}\" is outside the open project.")
+        val path = resolve(project, preview)
+            ?: return ApplyResult.Failed(refusal(preview))
 
         return try {
             var failure: String? = null
@@ -58,6 +60,46 @@ object FileEditApplier {
         } catch (e: Exception) {
             ApplyResult.Failed("${e.javaClass.simpleName}: ${e.message}")
         }
+    }
+
+    /**
+     * Re-derives the absolute path, applying the confinement rule that belongs to
+     * this preview's scope. Null means refuse.
+     *
+     * **Deliberately not a resolved path passed in by the caller.** The whole
+     * value of this class being the last stop before the write is that it does
+     * the check itself; accepting an already-resolved `Path` would make the
+     * check the caller's problem, and the caller is UI code reacting to a button
+     * on a card built from model output.
+     *
+     * Both branches check. `Project` goes through `ProjectFiles.resolve()`
+     * exactly as before — byte-for-byte the same behaviour for `propose_edit`,
+     * which never sets a scope. `GlobalMemory` cannot use that check at all,
+     * since it points outside every project root, so it runs its own: the path
+     * is rebuilt from a slug that must still validate, which is the only way a
+     * name can become a file in that directory.
+     */
+    private fun resolve(project: Project, preview: EditPreview): java.nio.file.Path? =
+        resolve(ProjectFiles.root(project), GlobalMemory.root(), preview)
+
+    /**
+     * Root-relative overload, so both confinement rules are unit-testable without
+     * an IDE — the same trick `ProjectFiles.resolve` and `GlobalMemory.resolve`
+     * already use. A check that cannot be tested is a check nobody notices losing.
+     */
+    internal fun resolve(
+        projectRoot: java.nio.file.Path?,
+        globalRoot: java.nio.file.Path,
+        preview: EditPreview,
+    ): java.nio.file.Path? = when (preview.scope) {
+        PathScope.Project -> projectRoot?.let { ProjectFiles.resolve(it, preview.relativePath) }
+        PathScope.GlobalMemory -> GlobalMemory.resolve(globalRoot, preview.relativePath)
+    }
+
+    private fun refusal(preview: EditPreview): String = when (preview.scope) {
+        PathScope.Project -> "\"${preview.relativePath}\" is outside the open project."
+        PathScope.GlobalMemory ->
+            "\"${preview.relativePath}\" is not a valid memory topic name. Nothing was written."
     }
 
     private fun findOrCreate(absolutePath: String, preview: EditPreview): VirtualFile? {

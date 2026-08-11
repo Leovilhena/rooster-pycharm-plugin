@@ -5,6 +5,24 @@ import com.intellij.openapi.project.Project
 import java.nio.file.Files
 
 /**
+ * Which confinement rule [relativePath] has to satisfy.
+ *
+ * Not a formatting hint: it selects the trust boundary the path is checked
+ * against in [dev.turbofieldfare.plugin.edit.FileEditApplier]. The two are
+ * genuinely different checks — one confines an arbitrary relative path to the
+ * project root through symlinks, the other refuses anything that is not a bare
+ * slug — so an [EditPreview] cannot be applied without saying which one applies
+ * to it.
+ */
+sealed interface PathScope {
+    /** `relativePath` is relative to the project root. */
+    data object Project : PathScope
+
+    /** `relativePath` is a memory topic slug under the global memory directory. */
+    data object GlobalMemory : PathScope
+}
+
+/**
  * What a proposed edit would do. Read-only to build, so it can be shown even when
  * the gate refuses the edit.
  */
@@ -14,6 +32,11 @@ data class EditPreview(
     val newContent: String,
     /** True when the file does not exist yet and the edit would create it. */
     val isNewFile: Boolean,
+    /**
+     * Defaults to [PathScope.Project], so every existing producer of an
+     * `EditPreview` keeps exactly the behaviour it had.
+     */
+    val scope: PathScope = PathScope.Project,
 ) {
     val addedLines: Int get() = newContent.lineCount() - commonPrefixLines()
     val removedLines: Int get() = oldContent.lineCount() - commonPrefixLines()

@@ -161,4 +161,4 @@ val READ_ONLY_TOOLS: List<Tool> = listOf(ReadFileTool, ListFilesTool, SearchInFi
  * the user see the proposal, instead of the model not knowing edits exist.
  */
 fun allTools(approver: ShellApprover): List<Tool> =
-    READ_ONLY_TOOLS + ProposeEditTool + RunShellCommandTool(approver)
+    READ_ONLY_TOOLS + ProposeEditTool + WriteMemoryTool + RunShellCommandTool(approver)
