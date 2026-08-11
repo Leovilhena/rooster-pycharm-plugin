@@ -11,15 +11,16 @@ the code is the bug report.
 
 | Package | Responsibility |
 | --- | --- |
-| `client/` | `TurboFieldfareClient` — JDK `java.net.http.HttpClient`, streaming SSE; wire-format data classes (Gson) |
+| `client/` | `RoosterClient` — JDK `java.net.http.HttpClient`, streaming SSE; wire-format data classes (Gson) |
 | `chat/` | `ChatSession` — message history for one conversation |
-| `tools/` | Tool definitions (`ReadFile`, `ListFiles`, `SearchInFiles`, `ProposeEdit`, `RunShellCommand`) and `ToolExecutor`, the client-side tool loop |
+| `tools/` | Tool definitions (`ReadFile`, `ListFiles`, `SearchInFiles`, `ReadMemoryFile`, `ProposeEdit`, `WriteMemory`, `RunShellCommand`) and `ToolExecutor`, the client-side tool loop |
 | `planmode/` | `PlanModeStateMachine` — `PLAN` / `ACT`, the enforcement point |
-| `edit/` | `FileEditApplier` — `WriteCommandAction`-wrapped Document edits, undo-grouped |
+| `edit/` | `FileEditApplier` — `WriteCommandAction`-wrapped Document edits, undo-grouped; branches on `PathScope` |
+| `memory/` | `MemorySlug` (topic-name rule), `MemoryIndex` (directory scan → the always-loaded index), `GlobalMemory` (the application-scoped memory root), `ProjectInstructions` (`ROOSTER.md`) |
 | `shell/` | `ShellCommandExecutor`, `ShellAllowListMatcher` |
 | `completion/` | Inline ghost-text completion provider (opt-in, off by default) |
 | `ui/` | Tool window, chat panel, diff cards, approval cards (plain Swing + `com.intellij.diff.*`) |
-| `settings/` | `TurboFieldfareSettings` (`PersistentStateComponent`) + `Configurable` UI |
+| `settings/` | `RoosterSettings` (`PersistentStateComponent`) + `Configurable` UI |
 
 ## Trust boundaries
 
@@ -56,7 +57,7 @@ that matters is deterministic Kotlin.
 
 ## Client notes
 
-`TurboFieldfareClient` pins two things that cost real debugging time:
+`RoosterClient` pins two things that cost real debugging time:
 
 - **`HttpClient.Version.HTTP_1_1`.** With the JDK default (HTTP/2 with an h2c
   upgrade attempt), every request from inside the IDE timed out against the
@@ -71,7 +72,7 @@ user not having started the server yet is the single most common state.
 
 ## Inline completion
 
-`TurboFieldfareInlineCompletionProvider` extends the platform's
+`RoosterInlineCompletionProvider` extends the platform's
 `DebouncedInlineCompletionProvider` and is registered on the
 `com.intellij.inline.completion.provider` extension point (verified against the
 installed PyCharm CE 2025.2.5 SDK, not assumed).
@@ -181,15 +182,184 @@ neither `../../.ssh/id_rsa` nor a symlink planted inside the repo can turn a
 read-only tool into an exfiltration channel. Refusal returns an error string to
 the model; there is no fallback path.
 
+## Memory
+
+Persistent facts that survive across chat sessions, in two independent scopes:
+
+- **Project** — `<project root>/.rooster/memory/<slug>.md`, resolved by the
+  existing `ProjectFiles.resolve()`. It is just another project-relative path;
+  no new confinement logic exists for it.
+- **Global** — `<PathManager.getConfigPath()>/rooster/memory/<slug>.md`.
+  That is the same config directory `RoosterSettings` persists into
+  (verified on this machine: the settings file is at
+  `…/PC-2025.2.5/config/options/rooster.xml`, and `getOptionsPath()` is
+  `getConfigPath() + "/options"`, so the memory directory sits beside it). It is
+  outside every project root, so `ProjectFiles` cannot confine it — see below.
+
+Deliberately **not** RAG. The corpus is curated by construction, not
+accumulated: an embedding model would cost real RAM on an 8GB machine already
+holding Gemma4, and a 4B-active-parameter model is worse than a big one at
+judging whether a retrieved chunk is relevant — noise would cost more than
+retrieval buys. See "Deliberate simplifications" at the end of this section.
+
+**No persisted index.** The index is computed by scanning the two directories.
+Cheap at this corpus size, and there is no manifest that can drift out of sync
+with the files it describes.
+
+**No frontmatter, no `type` taxonomy.** The two directories *are* the type
+system. A `type:` field the model has to remember to set correctly — and could
+set to something contradicting the file's own location — buys nothing the
+directory doesn't already give for free.
+
+### The slug rule is the confinement mechanism for global scope
+
+`isValidSlug` (`memory/MemorySlug.kt`) accepts `^[a-z0-9]+(-[a-z0-9]+)*$` up to
+60 characters, and the plugin appends `.md` itself. A filename is never accepted
+from the model. This matters because global memory lives outside every project
+root, where `ProjectFiles`'s symlink-aware check does not apply: a slug contains
+no `/`, no `.` and no `..`, so traversal is not *refused*, it is unrepresentable.
+
+### File format, and hand-authored files
+
+Plain markdown: `# One-line title` first, free-form body after. The write tool
+always emits that line itself from a separate `title` argument rather than
+trusting the model to include it. A file missing the line still works — the
+index falls back to the filename — so a user can write memory files in their own
+editor and the plugin treats them as first-class.
+
+### Loading: `ROOSTER.md` and the index are message 0
+
+`RoosterPanel.loadSystemContext` builds one `system` message at panel
+construction, before any user turn: the project's `ROOSTER.md` first, then the
+memory index, joined by a blank line. Either half is omitted when it has nothing
+to say, and the message is skipped entirely when both do.
+
+`ROOSTER.md` is a fixed, root-relative file the user writes by hand — house
+rules, in the CLAUDE.md/AGENTS.md sense. It leads because it is directive and
+the index is reference: "follow these" before "here is what you can look up".
+It is deliberately *not* memory. Memory is proposed by the model and approved a
+card at a time; this file has no tool and no card, because there is nothing in
+it for the model to change. `ProjectInstructions.read` also needs no
+`ProjectFiles` confinement — that machinery exists to stop a model-supplied path
+escaping the project, and this path is a constant.
+
+The index half scans both memory directories once — topic names and one-line
+titles only, never bodies. That is the whole point of the split: the
+fixed per-session cost stays a few hundred tokens no matter how much memory
+accumulates, and the model spends the rest only on the topic it decides it
+needs. A line in the transcript says how many topics were loaded, because
+context spent without the user typing anything, and an answer shaped by a
+memory file they forgot writing, should not look like the model inventing house
+rules.
+
+The snapshot is taken once and never rewritten, matching `ChatSession`'s "no
+summarisation, no truncation, no reordering" rule. Only the *list* can go stale,
+and only against a hand-edit made mid-session — `read_memory_file` always reads
+live from disk, so nothing fetched is ever stale, and the rare case is already
+covered by starting a new chat.
+
+### Fetching
+
+`read_memory_file(scope, topic)` is `effectful = false`, so it runs in Plan mode
+as well as Act — fetching a fact the user recorded themselves is the same class
+of action as `read_file`. It always reads live from disk, so nothing it returns
+can be stale, and it is capped at 8000 characters (lower than `read_file`'s 60k:
+this content lands in a conversation that already holds the index and the
+question, and a topic long enough to hit the cap should have been split).
+
+Both scopes share one resolver, `resolveMemoryFile()`, so a read and its matching
+write cannot disagree about where a topic lives — that disagreement would be a
+memory that saves successfully and is never found again.
+
+Verified against the real server (2026-08-11, `gemma-4-26b-a4b-it`): given only
+the index message as message 0 and the question "How should I write tests in
+this project?", the model emitted
+`read_memory_file {"scope":"project","topic":"testing-conventions"}` unprompted,
+and answered from the returned file on the next turn. The design's one real
+uncertainty — whether a 4B-active-parameter model would use an index it was
+merely handed — is therefore measured rather than assumed.
+
+### Writing
+
+`write_memory(scope, topic, title, content)` is `effectful = true`, so Plan mode
+refuses it through the existing gate with no new gating logic. In Act mode it
+still writes nothing itself: it produces an `EditPreview`, the transcript shows
+the same diff card `propose_edit` uses, and a human clicking Apply is what puts
+bytes on disk. **Every write, project or global, goes through that click.**
+Memory is the last thing that should accumulate silently — a fact the model
+decided to keep, that the user never saw, would shape every later session
+invisibly.
+
+It reuses the *edit* approval pattern, not the *shell* one: a memory write has
+the same risk shape as `propose_edit`, not that of a one-shot irreversible
+external action, so there is no reason to suspend the model's turn waiting for a
+human the way `run_shell_command` does.
+
+The `# Title` line is written by the tool from the separate `title` argument,
+never taken from the body. The index reads that line, so leaving it to model
+discipline would produce index entries that silently disagree with their files.
+
+### `PathScope`, and why the applier branches
+
+`EditPreview` carries a `scope: PathScope` (`Project` by default, so
+`propose_edit` is unchanged). It is not a formatting hint — it selects which
+trust boundary the path is checked against:
+
+| Scope | `relativePath` holds | Checked by |
+| --- | --- | --- |
+| `Project` | a project-relative path | `ProjectFiles.resolve()` — normalise, resolve symlinks, must be under the root |
+| `GlobalMemory` | a bare topic slug | `GlobalMemory.resolve()` — must still validate as a slug |
+
+`FileEditApplier.apply()` branches on that scope to pick the resolver **and
+re-derives the path in both branches, immediately before the write**. It
+deliberately does not accept an already-resolved `Path` from its caller: the
+entire value of this class being the last stop before disk is that it does the
+check itself, and its caller is UI code reacting to a button on a card built
+from model output. A global-scope write that skipped the check would mean a
+crafted "topic" could write anywhere the IDE can reach, with nothing left to
+say no.
+
+Both branches are covered by `FileEditApplierTest` through a root-relative
+overload, the same testability trick `ProjectFiles` and `GlobalMemory` use — a
+check that cannot be tested is a check nobody notices losing.
+
+`MemoryRoundTripTest` covers everything on either side of the Document write:
+the bytes the tool produces, where they land, and that the next session's index
+and `read_memory_file` both agree with them. A write that saved correctly but
+indexed under a different title, or under a name the read tool cannot ask for,
+is the failure that test exists to catch.
+
+**Still unverified by hand:** clicking Apply on a *global* memory card. The
+write goes through `VfsUtil.createDirectories` and `FileDocumentManager` on a
+path in the IDE's own config directory rather than in a project, and that
+specific combination has not been exercised against a running IDE. The
+project-scope path is the one `propose_edit` has always used.
+
+### Budget
+
+The index is capped at `MemoryIndex.MAX_INDEX_CHARS` (~2000 chars, ~500 tokens
+on the existing chars/4 estimate, ~3% of a 16K window) with an "N more topics
+not shown" note past it, so a hand-filled directory cannot silently evict the
+user's question. A realistic two-topic index measured ~380 characters, ~95
+tokens — under 1% of the window.
+
+**No new budget logic.** The index is an ordinary message in `ChatSession`, so
+`approximateTokens()` counts it and the existing 75% warning already accounts
+for it. That is load-bearing rather than incidental: an index carried outside
+the session, or injected at request time, would be spent but invisible, and the
+warning would fire late on exactly the conversations where memory made things
+tight. `MemoryContextBudgetTest` pins it — the index-carrying session's estimate
+exceeds an identical one without it by precisely the index's own cost.
+
 ## Settings and the localhost rule
 
-`TurboFieldfareSettings` is an application-level `PersistentStateComponent` (one
+`RoosterSettings` is an application-level `PersistentStateComponent` (one
 local server, not one per project). `LocalhostOnlyValidator` is the only thing
 allowed to say a host is acceptable, and it is applied in **two** places:
 
-1. `TurboFieldfareConfigurable.apply()` — the path a human takes, where the
+1. `RoosterConfigurable.apply()` — the path a human takes, where the
    rejection also has to explain itself.
-2. `TurboFieldfareSettings.loadState()` — because `turbofieldfare.xml` is an
+2. `RoosterSettings.loadState()` — because `rooster.xml` is an
    ordinary file a user can hand-edit, and settings on disk are not trusted
    input. A non-loopback host found there is reset to the default.
 
@@ -212,9 +382,21 @@ tomorrow.
 | 8. Inline completion | done |
 | 9. Polish | done |
 
+### Memory feature
+
+| Phase | State |
+| --- | --- |
+| M1. Slug + index, pure | done |
+| M2. Global memory root | done |
+| M3. `read_memory_file` | done |
+| M4. Index injection | done |
+| M5. `write_memory` preview (Plan mode) | done |
+| M6. `write_memory` apply (Act mode) | code complete; Apply click-through pending |
+| M7. Context-budget check | done |
+
 ## Error messages and budgets
 
-- `TurboFieldfareClient.explain()` rewrites the server's terse 4xx bodies into
+- `RoosterClient.explain()` rewrites the server's terse 4xx bodies into
   something actionable: a context overflow says to start a new chat or raise
   `--max-context`; a rejected tool schema says so explicitly; an unknown model
   points at the model id setting.
@@ -242,6 +424,41 @@ tomorrow.
   the behaviour that matters — edit applies, one Cmd+Z reverts it completely, the
   file on disk matches its original checksum afterwards — is on the manual
   checklist and was verified that way.
+- **`EditProposalCard` did change, by one method.** The memory plan said the card
+  was already generic over `EditPreview` and needed no edit. It is generic, but a
+  global memory topic's `relativePath` is a bare slug, so the card would have
+  read "New file: prefers-early-returns" with nothing saying the bytes land
+  outside the project in a directory every other project reads. The card is the
+  approval, so it now names the scope. Adding to what an approval discloses is
+  the one direction this change can safely go.
+- **`FileEditApplier.resolve` gained a root-relative overload.** Not in the plan;
+  added because the plan's own emphasis — that the global-scope branch must
+  re-validate rather than be bypassed — was otherwise untestable without a
+  platform fixture this repo does not use. The overload mirrors the one
+  `ProjectFiles.resolve` already has, and `FileEditApplierTest` covers both
+  branches through it.
+- **`ROOSTER.md`'s ordering is unverified in a running IDE.** `ProjectInstructions.read`
+  is covered by `ProjectInstructionsTest` (present, absent, blank, no-root,
+  directory-in-the-way), and the sandbox was confirmed to start with the plugin
+  loaded, the new ids in place and settings reset to defaults. What was not
+  observed is the composed system message itself: the tool window is constructed
+  only when a human opens it, and this environment grants no screen recording
+  permission (`screencapture` returns a black frame) and no usable accessibility
+  tree, so the panel cannot be opened or read. The composition it performs is
+  `listOfNotNull(instructions, index).joinToString("\n\n")` — ordering is
+  positional and has no branch in it — but "instructions actually appear ahead
+  of the index in what the server receives" is asserted by reading, not by
+  running.
+- **The rename to Rooster drops the state it used to read, on purpose.** The
+  settings file moved from `turbofieldfare.xml` to `rooster.xml`, the tool
+  window id from `TurboFieldfare` to `Rooster`, and both memory directories
+  from `turbofieldfare`/`.turbofieldfare` to `rooster`/`.rooster`. Nothing
+  migrates. What is lost is two booleans in a sandbox, a remembered window
+  position, and a memory directory that exists on exactly one machine — all
+  reconfigured in less time than reviewing the migration code would take, and
+  the plugin has never been released, so no one else has any of it. Migration
+  code for a pre-release single-machine state is a permanent maintenance
+  liability bought with a one-time inconvenience.
 - **Toolchain JDK is PyCharm's bundled JBR 21**, rather than a
   `brew install openjdk@21`. Reason: it is a real JDK 21, already on disk, and
   exactly the runtime the plugin will actually run on.
@@ -250,18 +467,16 @@ tomorrow.
 
 Not built yet; captured here so the design thinking isn't lost before it is.
 
-### Memory
+### Skills
 
-A flat, curated file (or a small set of them) loaded into the system prompt
-alongside a chat session — the same pattern this project's own development
-tooling uses for itself. Deliberately **not** a vector DB/RAG/embeddings
-setup: the corpus (user preferences, project facts, prior decisions) stays
-small by construction, so semantic retrieval buys nothing a full read
-wouldn't, while costing a local embedding model's RAM on a machine already
-spending 2GB on Gemma4, an index to keep fresh, and a weaker model's ability
-to judge which retrieved chunk is actually relevant. Skip RAG here unless the
-memory corpus itself grows past what fits in context — it hasn't, and
-shouldn't be allowed to by design (curated, not accumulated).
+The memory mechanism — a directory of named markdown files, indexed by scan
+rather than a manifest, fetched on demand by a `(scope, topic)`-shaped
+read-only tool — generalises to bundled "skills" without changing anything
+about the mechanism: a skill is structurally just another named file in a
+third directory with its own index section and a `read_skill_file` tool of
+identical shape. What is genuinely new, and deliberately not designed here, is
+*invocation*: a skill has to be told to the model as "follow this", not merely
+offered as a fact. Not guessed at until it is built.
 
 ### MCP client (library ingestion + fetch_url)
 

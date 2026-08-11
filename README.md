@@ -1,6 +1,6 @@
-# TurboFieldfare for PyCharm
+# Rooster for PyCharm
 
-[![CI](https://github.com/Leovilhena/turbofieldfare-pycharm-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Leovilhena/turbofieldfare-pycharm-plugin/actions/workflows/ci.yml)
+[![CI](https://github.com/Leovilhena/rooster-pycharm-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Leovilhena/rooster-pycharm-plugin/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF.svg?logo=kotlin)](https://kotlinlang.org)
 [![Platform](https://img.shields.io/badge/PyCharm%20CE-2025.2.x-000000.svg?logo=pycharm)](https://www.jetbrains.com/pycharm/)
@@ -27,6 +27,16 @@ says so and does nothing.
   before anything is written, and apply it with one click and one undo.
 - **Runs shell commands**, either from your allow-list or with a per-command
   approval card.
+- **Remembers things across sessions.** Markdown files under
+  `.rooster/memory/` in your project, or in the IDE config directory for
+  facts that apply everywhere. Each new chat loads a short index of topic titles
+  and fetches a topic in full only when it needs one. The assistant can propose
+  writing a memory, but it appears as the same diff card an edit does and
+  nothing is saved until you click Apply. Write the files by hand if you prefer
+  — the plugin reads whatever is there.
+- **Reads `ROOSTER.md`** from your project root, if you write one — house rules
+  loaded into every new chat, ahead of the memory index. Same idea as
+  `CLAUDE.md` or `AGENTS.md`: you write it, the assistant only reads it.
 - **Inline ghost-text completion**, off by default (see below).
 
 ## Safety model
@@ -68,7 +78,7 @@ local ~5 tok/s decoder.
 
 ## Settings
 
-**Settings → Tools → TurboFieldfare**: server host and port, model id, Plan-mode
+**Settings → Tools → Rooster**: server host and port, model id, Plan-mode
 default, the shell allow-list, inline completion, the server's context window
 (used only to warn you before a chat outgrows it), and the shell timeout.
 

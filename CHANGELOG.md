@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The plugin is now called Rooster.** The name it shipped under was the same
+  as the inference server it talks to, which made every sentence about either
+  one ambiguous. The server keeps its name; only this plugin is renamed. The
+  Kotlin package moved from `dev.turbofieldfare.plugin` to `dev.rooster.plugin`
+  and the classes named after the old brand moved with it — an internal change
+  with no behaviour attached.
+- **The rename moves state, and nothing migrates it.** Settings now persist to
+  `rooster.xml` instead of `turbofieldfare.xml`, the tool window has a new id
+  (so its position and visibility reset once), and memory now lives under
+  `.rooster/memory/` in a project and `rooster/memory/` in the IDE config
+  directory. Existing settings fall back to defaults and existing memory files
+  need moving by hand. Nothing has been released yet, so this affects only a
+  development sandbox.
+- The GitHub repository is now `Leovilhena/rooster-pycharm-plugin`. GitHub
+  redirects the old URL, so existing clones keep working, but it is worth
+  updating the remote.
 - Inline completion now only fires for Python and shell files (`py`, `pyi`,
   `sh`, `bash`, `zsh`) — every other file type skips the request entirely.
   The extension check is a pure function, `isSupportedCompletionExtension`,
@@ -21,12 +37,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ROOSTER.md`: house rules for one project, in its root, loaded into every new
+  chat ahead of the memory index. You write it yourself in your own editor —
+  unlike memory, the assistant is never offered a way to change it. A project
+  without one sends nothing, and the transcript says when one was loaded.
+- `write_memory`: the assistant can propose remembering something — a project
+  convention, or a preference that applies everywhere. It appears as the same
+  diff card a file edit does, and nothing is saved until you click Apply. In
+  Plan mode it is refused outright, and the card says so. Cards for global
+  memory name the scope, so it is clear when a write lands outside the project.
+- Memory is loaded automatically at the start of each chat: a short index of
+  topic names and one-line titles from both scopes, and nothing else. The
+  transcript says how many topics were loaded. A fresh install with no memory
+  files sends nothing at all.
+- `read_memory_file`: the assistant can read a memory topic in full — a markdown
+  file under `.rooster/memory/` in the project, or the same directory in
+  the IDE config directory for facts that apply to every project. Read-only, so
+  it works in Plan mode too. Files can be written by hand in your own editor;
+  the plugin does not need to have created them.
 - GitHub Actions CI (`.github/workflows/ci.yml`): build, unit tests, and plugin
   structure verification on every push/PR to `main`, running on `ubuntu-latest`
   against the downloadable `pycharmCommunity` platform artifact (local dev keeps
   building against the installed PyCharm CE app; see `build.gradle.kts`).
 - `LICENSE` (Apache 2.0, matching the upstream TurboFieldfare project).
-- Plugin scaffolding: a **TurboFieldfare** tool window on the right-hand side of
+- Plugin scaffolding: a **Rooster** tool window on the right-hand side of
   PyCharm CE 2025.2, currently an empty placeholder panel.
 - Server status line in the tool window: green "Connected" with the served model
   ids in the tooltip when a local TurboFieldfare server answers, grey "Not
@@ -36,7 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a newline) and the reply streams in token by token. The Send button becomes
   Cancel while generating; cancelling drops the connection so the server stops
   generating instead of finishing an answer nobody is waiting for.
-- Settings panel under **Settings → Tools → TurboFieldfare**: server host and
+- Settings panel under **Settings → Tools → Rooster**: server host and
   port, model id override, and whether new chats start in Plan mode. Changing
   the port takes effect immediately, with no IDE restart.
 - The server host is restricted to loopback. A non-local host is refused with an

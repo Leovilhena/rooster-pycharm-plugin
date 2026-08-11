@@ -1,4 +1,4 @@
-rootProject.name = "turbofieldfare-pycharm-plugin"
+rootProject.name = "rooster-pycharm-plugin"
 
 pluginManagement {
     repositories {
