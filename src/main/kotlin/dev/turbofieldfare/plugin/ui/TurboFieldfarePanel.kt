@@ -7,10 +7,11 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import dev.turbofieldfare.plugin.chat.ChatSession
-import dev.turbofieldfare.plugin.client.ChatRequest
 import dev.turbofieldfare.plugin.client.ServerStatus
-import dev.turbofieldfare.plugin.client.StreamEvent
 import dev.turbofieldfare.plugin.client.TurboFieldfareClient
+import dev.turbofieldfare.plugin.tools.LoopEvent
+import dev.turbofieldfare.plugin.tools.READ_ONLY_TOOLS
+import dev.turbofieldfare.plugin.tools.ToolExecutor
 import dev.turbofieldfare.plugin.settings.TurboFieldfareSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -116,39 +117,25 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
         setGenerating(true)
 
         val configuredModel = TurboFieldfareSettings.getInstance().state.modelId.ifBlank { null }
-        val request = ChatRequest(
-            model = configuredModel ?: serverModel ?: FALLBACK_MODEL,
-            messages = session.history(),
-        )
+        val model = configuredModel ?: serverModel ?: FALLBACK_MODEL
+        val executor = ToolExecutor(project, session, READ_ONLY_TOOLS)
 
         generation = scope.launch {
-            val reply = StringBuilder()
             try {
-                client().streamChat(request).collect { event ->
-                    when (event) {
-                        is StreamEvent.Delta -> {
-                            reply.append(event.text)
-                            withContext(Dispatchers.EDT) { append(event.text) }
+                executor.run(client(), model) { event ->
+                    withContext(Dispatchers.EDT) {
+                        when (event) {
+                            is LoopEvent.Text -> append(event.text)
+                            is LoopEvent.ToolActivity -> append("\n  · ${event.detail}\n")
+                            is LoopEvent.Done -> event.reason?.let { append("\n[$it]") }
                         }
-
-                        is StreamEvent.Finished -> {
-                            if (event.reason == "length") {
-                                withContext(Dispatchers.EDT) { append("\n[stopped: hit the token limit]") }
-                            }
-                        }
-
-                        is StreamEvent.Failed ->
-                            withContext(Dispatchers.EDT) { append("\n[error: ${event.message}]") }
                     }
                 }
-                if (reply.isNotEmpty()) session.addAssistant(reply.toString())
             } finally {
                 // Runs on cancellation too, so the button always returns to "Send".
                 withContext(Dispatchers.EDT + kotlinx.coroutines.NonCancellable) {
-                    if (reply.isEmpty()) append("[cancelled]")
                     append("\n")
                     setGenerating(false)
-                    generation = null
                 }
             }
         }

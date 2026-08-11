@@ -26,3 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   explanation, both when typed into Settings and when found in a hand-edited
   settings file — the server has no authentication or TLS, so the plugin will
   not send code anywhere else.
+- Read-only tools the assistant can call while answering: `read_file`,
+  `list_files` and `search_in_files`, each confined to the open project. The
+  transcript shows every tool call as it happens.

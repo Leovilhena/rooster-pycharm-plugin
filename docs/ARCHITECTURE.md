@@ -69,6 +69,35 @@ that matters is deterministic Kotlin.
 An unreachable server is a value (`ServerStatus.Down`), never an exception: the
 user not having started the server yet is the single most common state.
 
+## Tool loop
+
+`ToolExecutor.run()` is the whole agentic loop; the server has none. One
+iteration: send history + tool specs → append the assistant message **unchanged**
+(including its `tool_calls`, so ids line up) → run each call in order → append one
+`role: tool` message per call keyed by `tool_call_id` → resend. History is never
+rewritten, which keeps the server's cached KV prefix valid and keeps the
+transcript the user reads identical to the one the model saw. The loop stops
+after 8 rounds — a stop, not a tuning knob.
+
+Verified against the real server (2026-08-11, `gemma-4-26b-a4b-it`):
+
+- Tool calls are returned with `finish_reason: "tool_calls"`, and in streaming
+  mode arrive whole in a single delta. The client still reassembles by `index`,
+  because the wire format permits fragmented `arguments`.
+- `role: tool` results and assistant messages carrying `tool_calls` round-trip
+  correctly, with or without an explicit `"content": null`.
+- Plain JSON Schema (`type: object` + string properties + `required`) is
+  accepted. Schemas stay within that subset — no `oneOf`/`allOf`, no
+  `additionalProperties`.
+
+### File tools are confined to the project
+
+`ProjectFiles.resolve` is a trust boundary. Model-supplied paths are normalised
+**and** resolved through symlinks before being compared to the project root, so
+neither `../../.ssh/id_rsa` nor a symlink planted inside the repo can turn a
+read-only tool into an exfiltration channel. Refusal returns an error string to
+the model; there is no fallback path.
+
 ## Settings and the localhost rule
 
 `TurboFieldfareSettings` is an application-level `PersistentStateComponent` (one
@@ -93,7 +122,7 @@ tomorrow.
 | 1. HTTP client + health check | done |
 | 2. Basic non-tool chat | done |
 | 3. Settings | done |
-| 4. Read-only tools + tool loop | not started |
+| 4. Read-only tools + tool loop | done |
 | 5. Plan/Act + ProposeEdit (preview only) | not started |
 | 6. Act-mode edit execution + undo | not started |
 | 7. Shell tool + allow-list | not started |

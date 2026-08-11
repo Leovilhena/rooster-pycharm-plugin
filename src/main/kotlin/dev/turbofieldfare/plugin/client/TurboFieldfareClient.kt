@@ -21,7 +21,13 @@ sealed interface StreamEvent {
     /** A fragment of assistant text, in order. */
     data class Delta(val text: String) : StreamEvent
 
-    /** The server's `finish_reason` (`stop`, `length`, …). */
+    /**
+     * The assistant asked for tools. Emitted once, just before [Finished],
+     * with the calls already reassembled from their streamed fragments.
+     */
+    data class ToolCalls(val calls: List<ToolCall>) : StreamEvent
+
+    /** The server's `finish_reason` (`stop`, `length`, `tool_calls`, …). */
     data class Finished(val reason: String) : StreamEvent
 
     /** Something went wrong; [message] is meant to be shown to the user as-is. */
@@ -126,6 +132,11 @@ class TurboFieldfareClient(private val baseUrl: String = DEFAULT_BASE_URL) {
             return@flow
         }
 
+        // This server happens to send each tool call in a single delta, but the
+        // wire format allows the arguments string to arrive in fragments, so
+        // reassemble by index rather than trusting that.
+        val partial = PartialToolCalls()
+
         val stream = response.body()
         // Closing the body from the cancelling thread is what actually interrupts
         // the blocking readLine() below; checking isActive alone would not.
@@ -149,7 +160,11 @@ class TurboFieldfareClient(private val baseUrl: String = DEFAULT_BASE_URL) {
                     }
                     val choice = chunk?.choices?.firstOrNull() ?: continue
                     choice.delta?.content?.takeIf { it.isNotEmpty() }?.let { emit(StreamEvent.Delta(it)) }
-                    choice.finishReason?.let { emit(StreamEvent.Finished(it)) }
+                    choice.delta?.toolCalls?.forEach { partial.accumulate(it) }
+                    choice.finishReason?.let { reason ->
+                        if (partial.isNotEmpty()) emit(StreamEvent.ToolCalls(partial.build()))
+                        emit(StreamEvent.Finished(reason))
+                    }
                 }
             }
         } catch (e: java.io.IOException) {
@@ -160,6 +175,33 @@ class TurboFieldfareClient(private val baseUrl: String = DEFAULT_BASE_URL) {
             closer.dispose()
         }
     }.flowOn(Dispatchers.IO)
+
+    /** Reassembles streamed `tool_calls` deltas, which are keyed by `index`. */
+    private class PartialToolCalls {
+        private val byIndex = linkedMapOf<Int, MutableToolCall>()
+
+        fun accumulate(delta: ToolCall) {
+            val slot = byIndex.getOrPut(delta.index ?: byIndex.size) { MutableToolCall() }
+            delta.id?.let { slot.id = it }
+            delta.function?.name?.let { slot.name = it }
+            delta.function?.arguments?.let { slot.arguments.append(it) }
+        }
+
+        fun isNotEmpty(): Boolean = byIndex.isNotEmpty()
+
+        fun build(): List<ToolCall> = byIndex.values.map {
+            ToolCall(
+                id = it.id,
+                function = ToolCallFunction(name = it.name, arguments = it.arguments.toString()),
+            )
+        }
+
+        private class MutableToolCall {
+            var id: String? = null
+            var name: String? = null
+            val arguments = StringBuilder()
+        }
+    }
 
     private fun readErrorBody(response: HttpResponse<java.io.InputStream>): String {
         val text = response.body().use { it.readBytes().decodeToString() }
