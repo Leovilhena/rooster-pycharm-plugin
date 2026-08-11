@@ -47,7 +47,7 @@ internal fun isSupportedCompletionExtension(extension: String?): Boolean =
  */
 class RoosterInlineCompletionProvider : DebouncedInlineCompletionProvider() {
 
-    override val id = InlineCompletionProviderID("TurboFieldfare")
+    override val id = InlineCompletionProviderID("Rooster")
 
     override suspend fun getDebounceDelay(request: InlineCompletionRequest): Duration =
         RoosterSettings.getInstance().state.completionDebounceMs.milliseconds

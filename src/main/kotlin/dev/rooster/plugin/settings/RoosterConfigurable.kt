@@ -7,7 +7,7 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import javax.swing.JComponent
 
-/** Settings → Tools → TurboFieldfare. */
+/** Settings → Tools → Rooster. */
 class RoosterConfigurable : Configurable {
 
     private val hostField = JBTextField()

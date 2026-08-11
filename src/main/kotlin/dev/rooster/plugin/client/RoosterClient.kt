@@ -91,10 +91,10 @@ class RoosterClient(private val baseUrl: String = DEFAULT_BASE_URL) {
         } catch (e: java.net.ConnectException) {
             ServerStatus.Down("No server listening on $baseUrl")
         } catch (e: java.net.http.HttpTimeoutException) {
-            LOG.info("TurboFieldfare health check timed out against $baseUrl", e)
+            LOG.info("Server health check timed out against $baseUrl", e)
             ServerStatus.Down("Timed out connecting to $baseUrl")
         } catch (e: java.io.IOException) {
-            LOG.info("TurboFieldfare health check failed against $baseUrl", e)
+            LOG.info("Server health check failed against $baseUrl", e)
             ServerStatus.Down("${e.javaClass.simpleName}: ${e.message ?: "connection failed"}")
         }
     }

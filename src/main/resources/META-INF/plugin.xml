@@ -5,7 +5,7 @@
 
     <description><![CDATA[
         Offline AI assistant for PyCharm, backed by a local
-        <a href="https://github.com/">TurboFieldfare</a> server on 127.0.0.1.
+        <a href="https://github.com/drumih/turbo-fieldfare">TurboFieldfare</a> server on 127.0.0.1.
         Chat, read-only repo tools, gated file edits and shell commands, and
         opt-in inline completion &mdash; nothing leaves the machine.
     ]]></description>

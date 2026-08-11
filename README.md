@@ -1,4 +1,4 @@
-# TurboFieldfare for PyCharm
+# Rooster for PyCharm
 
 [![CI](https://github.com/Leovilhena/turbofieldfare-pycharm-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Leovilhena/turbofieldfare-pycharm-plugin/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -75,7 +75,7 @@ local ~5 tok/s decoder.
 
 ## Settings
 
-**Settings → Tools → TurboFieldfare**: server host and port, model id, Plan-mode
+**Settings → Tools → Rooster**: server host and port, model id, Plan-mode
 default, the shell allow-list, inline completion, the server's context window
 (used only to warn you before a chat outgrows it), and the shell timeout.
 

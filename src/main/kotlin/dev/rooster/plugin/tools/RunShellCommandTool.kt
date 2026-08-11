@@ -67,7 +67,7 @@ class RunShellCommandTool(private val approver: ShellApprover) : Tool {
         return buildString {
             if (result.timedOut) {
                 append("Command timed out after ${timeout}s and was killed. ")
-                append("If it needs longer, raise the timeout in Settings > Tools > TurboFieldfare.\n")
+                append("If it needs longer, raise the timeout in Settings > Tools > Rooster.\n")
             } else {
                 append("Exit code: ${result.exitCode}\n")
             }

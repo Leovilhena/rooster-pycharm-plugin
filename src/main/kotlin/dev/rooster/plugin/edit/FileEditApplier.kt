@@ -39,7 +39,7 @@ object FileEditApplier {
         return try {
             var failure: String? = null
             WriteCommandAction.writeCommandAction(project)
-                .withName("TurboFieldfare: apply ${preview.relativePath}")
+                .withName("Rooster: apply ${preview.relativePath}")
                 // One group id for the whole command, so undo treats it as one step.
                 .withGroupId(UNDO_GROUP)
                 .run<RuntimeException> {
@@ -112,5 +112,5 @@ object FileEditApplier {
         return parent.createChildData(this, nioPath.fileName.toString())
     }
 
-    private const val UNDO_GROUP = "TurboFieldfare.apply"
+    private const val UNDO_GROUP = "Rooster.apply"
 }

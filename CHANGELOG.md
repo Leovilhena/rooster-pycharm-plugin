@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against the downloadable `pycharmCommunity` platform artifact (local dev keeps
   building against the installed PyCharm CE app; see `build.gradle.kts`).
 - `LICENSE` (Apache 2.0, matching the upstream TurboFieldfare project).
-- Plugin scaffolding: a **TurboFieldfare** tool window on the right-hand side of
+- Plugin scaffolding: a **Rooster** tool window on the right-hand side of
   PyCharm CE 2025.2, currently an empty placeholder panel.
 - Server status line in the tool window: green "Connected" with the served model
   ids in the tooltip when a local TurboFieldfare server answers, grey "Not
@@ -56,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a newline) and the reply streams in token by token. The Send button becomes
   Cancel while generating; cancelling drops the connection so the server stops
   generating instead of finishing an answer nobody is waiting for.
-- Settings panel under **Settings → Tools → TurboFieldfare**: server host and
+- Settings panel under **Settings → Tools → Rooster**: server host and
   port, model id override, and whether new chats start in Plan mode. Changing
   the port takes effect immediately, with no IDE restart.
 - The server host is restricted to loopback. A non-local host is refused with an
