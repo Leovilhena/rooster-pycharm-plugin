@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `read_memory_file`: the assistant can read a memory topic in full — a markdown
+  file under `.turbofieldfare/memory/` in the project, or the same directory in
+  the IDE config directory for facts that apply to every project. Read-only, so
+  it works in Plan mode too. Files can be written by hand in your own editor;
+  the plugin does not need to have created them.
 - GitHub Actions CI (`.github/workflows/ci.yml`): build, unit tests, and plugin
   structure verification on every push/PR to `main`, running on `ubuntu-latest`
   against the downloadable `pycharmCommunity` platform artifact (local dev keeps

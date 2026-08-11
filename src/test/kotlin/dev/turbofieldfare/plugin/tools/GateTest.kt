@@ -55,6 +55,14 @@ class GateTest {
     }
 
     @Test
+    fun `reading memory is allowed in plan mode`() {
+        // Fetching a fact the user themselves recorded changes nothing, so it is
+        // the same class of action as read_file and must run in either mode.
+        assertTrue(READ_ONLY_TOOLS.contains(ReadMemoryFileTool))
+        assertEquals(GateDecision.Allow, ToolExecutor.gate(ReadMemoryFileTool, PlanModeState.PLAN))
+    }
+
+    @Test
     fun `state machine starts in plan and only moves when asked`() {
         val machine = PlanModeStateMachine()
         assertEquals(PlanModeState.PLAN, machine.current())

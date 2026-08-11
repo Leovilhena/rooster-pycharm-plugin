@@ -13,7 +13,7 @@ the code is the bug report.
 | --- | --- |
 | `client/` | `TurboFieldfareClient` — JDK `java.net.http.HttpClient`, streaming SSE; wire-format data classes (Gson) |
 | `chat/` | `ChatSession` — message history for one conversation |
-| `tools/` | Tool definitions (`ReadFile`, `ListFiles`, `SearchInFiles`, `ProposeEdit`, `RunShellCommand`) and `ToolExecutor`, the client-side tool loop |
+| `tools/` | Tool definitions (`ReadFile`, `ListFiles`, `SearchInFiles`, `ReadMemoryFile`, `ProposeEdit`, `RunShellCommand`) and `ToolExecutor`, the client-side tool loop |
 | `planmode/` | `PlanModeStateMachine` — `PLAN` / `ACT`, the enforcement point |
 | `edit/` | `FileEditApplier` — `WriteCommandAction`-wrapped Document edits, undo-grouped |
 | `memory/` | `MemorySlug` (topic-name rule), `MemoryIndex` (directory scan → the always-loaded index), `GlobalMemory` (the application-scoped memory root) |
@@ -227,6 +227,27 @@ trusting the model to include it. A file missing the line still works — the
 index falls back to the filename — so a user can write memory files in their own
 editor and the plugin treats them as first-class.
 
+### Fetching
+
+`read_memory_file(scope, topic)` is `effectful = false`, so it runs in Plan mode
+as well as Act — fetching a fact the user recorded themselves is the same class
+of action as `read_file`. It always reads live from disk, so nothing it returns
+can be stale, and it is capped at 8000 characters (lower than `read_file`'s 60k:
+this content lands in a conversation that already holds the index and the
+question, and a topic long enough to hit the cap should have been split).
+
+Both scopes share one resolver, `resolveMemoryFile()`, so a read and its matching
+write cannot disagree about where a topic lives — that disagreement would be a
+memory that saves successfully and is never found again.
+
+Verified against the real server (2026-08-11, `gemma-4-26b-a4b-it`): given only
+the index message as message 0 and the question "How should I write tests in
+this project?", the model emitted
+`read_memory_file {"scope":"project","topic":"testing-conventions"}` unprompted,
+and answered from the returned file on the next turn. The design's one real
+uncertainty — whether a 4B-active-parameter model would use an index it was
+merely handed — is therefore measured rather than assumed.
+
 ### Budget
 
 The index is capped at `MemoryIndex.MAX_INDEX_CHARS` (~2000 chars, ~500 tokens
@@ -272,7 +293,7 @@ tomorrow.
 | --- | --- |
 | M1. Slug + index, pure | done |
 | M2. Global memory root | done |
-| M3. `read_memory_file` | not started |
+| M3. `read_memory_file` | done |
 | M4. Index injection | not started |
 | M5. `write_memory` preview (Plan mode) | not started |
 | M6. `write_memory` apply (Act mode) | not started |

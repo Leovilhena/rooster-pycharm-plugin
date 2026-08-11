@@ -7,7 +7,8 @@ import java.nio.file.Path
 import kotlin.io.path.name
 
 /**
- * The three read-only tools: `read_file`, `list_files`, `search_in_files`.
+ * The read-only tools: `read_file`, `list_files`, `search_in_files`.
+ * (`read_memory_file` lives in its own file but joins them in [READ_ONLY_TOOLS].)
  *
  * All are `effectful = false`: they change nothing, so Plan mode lets them run.
  * They are still confined to the project by [ProjectFiles] — "read-only" limits
@@ -152,7 +153,7 @@ object SearchInFilesTool : Tool {
 }
 
 /** Tools that are safe in any mode, because they change nothing. */
-val READ_ONLY_TOOLS: List<Tool> = listOf(ReadFileTool, ListFilesTool, SearchInFilesTool)
+val READ_ONLY_TOOLS: List<Tool> = listOf(ReadFileTool, ListFilesTool, SearchInFilesTool, ReadMemoryFileTool)
 
 /**
  * Every tool offered to the model. Effectful ones are offered in Plan mode too:
