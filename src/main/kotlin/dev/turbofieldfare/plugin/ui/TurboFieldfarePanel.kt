@@ -11,6 +11,7 @@ import dev.turbofieldfare.plugin.client.ChatRequest
 import dev.turbofieldfare.plugin.client.ServerStatus
 import dev.turbofieldfare.plugin.client.StreamEvent
 import dev.turbofieldfare.plugin.client.TurboFieldfareClient
+import dev.turbofieldfare.plugin.settings.TurboFieldfareSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -40,7 +41,12 @@ import javax.swing.KeyStroke
 class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout()), Disposable {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val client = TurboFieldfareClient()
+    /**
+     * Rebuilt when the configured server URL changes, so a port change in
+     * Settings takes effect without restarting the IDE — but not rebuilt per
+     * request, since each client owns HTTP threads.
+     */
+    private var cachedClient: Pair<String, TurboFieldfareClient>? = null
     private val session = ChatSession()
 
     private val statusDot = StatusDot()
@@ -109,15 +115,16 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
         append("\nYou: $text\n\nAssistant: ")
         setGenerating(true)
 
+        val configuredModel = TurboFieldfareSettings.getInstance().state.modelId.ifBlank { null }
         val request = ChatRequest(
-            model = serverModel ?: FALLBACK_MODEL,
+            model = configuredModel ?: serverModel ?: FALLBACK_MODEL,
             messages = session.history(),
         )
 
         generation = scope.launch {
             val reply = StringBuilder()
             try {
-                client.streamChat(request).collect { event ->
+                client().streamChat(request).collect { event ->
                     when (event) {
                         is StreamEvent.Delta -> {
                             reply.append(event.text)
@@ -147,6 +154,12 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
         }
     }
 
+    private fun client(): TurboFieldfareClient {
+        val url = TurboFieldfareSettings.getInstance().baseUrl()
+        cachedClient?.takeIf { it.first == url }?.let { return it.second }
+        return TurboFieldfareClient(url).also { cachedClient = url to it }
+    }
+
     private fun setGenerating(generating: Boolean) {
         sendButton.text = if (generating) "Cancel" else "Send"
     }
@@ -159,7 +172,7 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
     private fun startStatusPolling() {
         scope.launch {
             while (isActive) {
-                val status = client.status()
+                val status = client().status()
                 if (status is ServerStatus.Up) serverModel = status.models.firstOrNull()
                 withContext(Dispatchers.EDT) { statusDot.show(status) }
                 delay(POLL_INTERVAL_MS)

@@ -14,6 +14,13 @@
     <depends>com.intellij.modules.python</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <applicationService
+                serviceImplementation="dev.turbofieldfare.plugin.settings.TurboFieldfareSettings"/>
+        <applicationConfigurable
+                parentId="tools"
+                id="dev.turbofieldfare.settings"
+                displayName="TurboFieldfare"
+                instance="dev.turbofieldfare.plugin.settings.TurboFieldfareConfigurable"/>
         <toolWindow id="TurboFieldfare"
                     anchor="right"
                     icon="AllIcons.Toolwindows.ToolWindowMessages"

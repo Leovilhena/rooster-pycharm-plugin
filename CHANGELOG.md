@@ -19,3 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a newline) and the reply streams in token by token. The Send button becomes
   Cancel while generating; cancelling drops the connection so the server stops
   generating instead of finishing an answer nobody is waiting for.
+- Settings panel under **Settings → Tools → TurboFieldfare**: server host and
+  port, model id override, and whether new chats start in Plan mode. Changing
+  the port takes effect immediately, with no IDE restart.
+- The server host is restricted to loopback. A non-local host is refused with an
+  explanation, both when typed into Settings and when found in a hand-edited
+  settings file — the server has no authentication or TLS, so the plugin will
+  not send code anywhere else.

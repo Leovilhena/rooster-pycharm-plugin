@@ -69,6 +69,22 @@ that matters is deterministic Kotlin.
 An unreachable server is a value (`ServerStatus.Down`), never an exception: the
 user not having started the server yet is the single most common state.
 
+## Settings and the localhost rule
+
+`TurboFieldfareSettings` is an application-level `PersistentStateComponent` (one
+local server, not one per project). `LocalhostOnlyValidator` is the only thing
+allowed to say a host is acceptable, and it is applied in **two** places:
+
+1. `TurboFieldfareConfigurable.apply()` — the path a human takes, where the
+   rejection also has to explain itself.
+2. `TurboFieldfareSettings.loadState()` — because `turbofieldfare.xml` is an
+   ordinary file a user can hand-edit, and settings on disk are not trusted
+   input. A non-loopback host found there is reset to the default.
+
+There is deliberately **no override flag**. Validation is on the literal string,
+with no DNS lookup: a name that resolves to loopback today can resolve elsewhere
+tomorrow.
+
 ## Phase status
 
 | Phase | State |
@@ -76,7 +92,7 @@ user not having started the server yet is the single most common state.
 | 0. Scaffolding | done |
 | 1. HTTP client + health check | done |
 | 2. Basic non-tool chat | done |
-| 3. Settings | not started |
+| 3. Settings | done |
 | 4. Read-only tools + tool loop | not started |
 | 5. Plan/Act + ProposeEdit (preview only) | not started |
 | 6. Act-mode edit execution + undo | not started |
