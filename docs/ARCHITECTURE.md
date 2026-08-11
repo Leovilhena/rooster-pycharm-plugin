@@ -16,7 +16,7 @@ the code is the bug report.
 | `tools/` | Tool definitions (`ReadFile`, `ListFiles`, `SearchInFiles`, `ProposeEdit`, `RunShellCommand`) and `ToolExecutor`, the client-side tool loop |
 | `planmode/` | `PlanModeStateMachine` — `PLAN` / `ACT`, the enforcement point |
 | `edit/` | `FileEditApplier` — `WriteCommandAction`-wrapped Document edits, undo-grouped |
-| `memory/` | `MemorySlug` (topic-name rule), `MemoryIndex` (directory scan → the always-loaded index) — pure, no IDE dependency |
+| `memory/` | `MemorySlug` (topic-name rule), `MemoryIndex` (directory scan → the always-loaded index), `GlobalMemory` (the application-scoped memory root) |
 | `shell/` | `ShellCommandExecutor`, `ShellAllowListMatcher` |
 | `completion/` | Inline ghost-text completion provider (opt-in, off by default) |
 | `ui/` | Tool window, chat panel, diff cards, approval cards (plain Swing + `com.intellij.diff.*`) |
@@ -189,9 +189,12 @@ Persistent facts that survive across chat sessions, in two independent scopes:
 - **Project** — `<project root>/.turbofieldfare/memory/<slug>.md`, resolved by the
   existing `ProjectFiles.resolve()`. It is just another project-relative path;
   no new confinement logic exists for it.
-- **Global** — application-scoped, alongside where `TurboFieldfareSettings`
-  already persists. Outside every project root, so `ProjectFiles` cannot confine
-  it (see below).
+- **Global** — `<PathManager.getConfigPath()>/turbofieldfare/memory/<slug>.md`.
+  That is the same config directory `TurboFieldfareSettings` persists into
+  (verified on this machine: the settings file is at
+  `…/PC-2025.2.5/config/options/turbofieldfare.xml`, and `getOptionsPath()` is
+  `getConfigPath() + "/options"`, so the memory directory sits beside it). It is
+  outside every project root, so `ProjectFiles` cannot confine it — see below.
 
 Deliberately **not** RAG. The corpus is curated by construction, not
 accumulated: an embedding model would cost real RAM on an 8GB machine already
@@ -268,7 +271,7 @@ tomorrow.
 | Phase | State |
 | --- | --- |
 | M1. Slug + index, pure | done |
-| M2. Global memory root | not started |
+| M2. Global memory root | done |
 | M3. `read_memory_file` | not started |
 | M4. Index injection | not started |
 | M5. `write_memory` preview (Plan mode) | not started |
