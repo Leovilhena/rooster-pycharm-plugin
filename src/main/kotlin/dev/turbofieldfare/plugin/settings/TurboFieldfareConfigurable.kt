@@ -18,6 +18,8 @@ class TurboFieldfareConfigurable : Configurable {
     private val completionEnabled = JBCheckBox("Enable inline completion (off by default — slow on this hardware)")
     private val completionAutomatic = JBCheckBox("Suggest automatically while typing (otherwise only on explicit trigger)")
     private val completionDebounce = JBTextField()
+    private val maxContext = JBTextField()
+    private val shellTimeout = JBTextField()
 
     private var root: JComponent? = null
 
@@ -49,6 +51,8 @@ class TurboFieldfareConfigurable : Configurable {
             .addComponent(completionEnabled)
             .addComponent(completionAutomatic)
             .addLabeledComponent("Completion debounce (ms):", completionDebounce)
+            .addLabeledComponent("Server context window (tokens, for warnings only):", maxContext)
+            .addLabeledComponent("Shell command timeout (seconds):", shellTimeout)
             .addComponentFillVertically(javax.swing.JPanel(), 0)
             .panel
         root = panel
@@ -65,7 +69,9 @@ class TurboFieldfareConfigurable : Configurable {
             parsedAllowList() != state.shellAllowList ||
             completionEnabled.isSelected != state.completionEnabled ||
             completionAutomatic.isSelected != state.completionAutomatic ||
-            completionDebounce.text != state.completionDebounceMs.toString()
+            completionDebounce.text != state.completionDebounceMs.toString() ||
+            maxContext.text != state.maxContextTokens.toString() ||
+            shellTimeout.text != state.shellTimeoutSeconds.toString()
     }
 
     private fun parsedAllowList(): MutableList<String> =
@@ -93,6 +99,10 @@ class TurboFieldfareConfigurable : Configurable {
         state.completionAutomatic = completionAutomatic.isSelected
         state.completionDebounceMs = completionDebounce.text.trim().toIntOrNull()?.coerceIn(0, 10_000)
             ?: throw ConfigurationException("Debounce must be a number of milliseconds.", "Invalid debounce")
+        state.maxContextTokens = maxContext.text.trim().toIntOrNull()?.coerceIn(0, 1_000_000)
+            ?: throw ConfigurationException("Context window must be a number of tokens.", "Invalid context window")
+        state.shellTimeoutSeconds = shellTimeout.text.trim().toIntOrNull()?.coerceIn(1, 3_600)
+            ?: throw ConfigurationException("Timeout must be a number of seconds.", "Invalid shell timeout")
     }
 
     override fun reset() {
@@ -105,5 +115,7 @@ class TurboFieldfareConfigurable : Configurable {
         completionEnabled.isSelected = state.completionEnabled
         completionAutomatic.isSelected = state.completionAutomatic
         completionDebounce.text = state.completionDebounceMs.toString()
+        maxContext.text = state.maxContextTokens.toString()
+        shellTimeout.text = state.shellTimeoutSeconds.toString()
     }
 }

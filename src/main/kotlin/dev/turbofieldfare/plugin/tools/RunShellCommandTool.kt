@@ -62,10 +62,12 @@ class RunShellCommandTool(private val approver: ShellApprover) : Tool {
             }
         }
 
-        val result = ShellCommandExecutor.run(command, workingDirectory)
+        val timeout = TurboFieldfareSettings.getInstance().state.shellTimeoutSeconds.toLong()
+        val result = ShellCommandExecutor.run(command, workingDirectory, timeout)
         return buildString {
             if (result.timedOut) {
-                append("Command timed out after ${ShellCommandExecutor.DEFAULT_TIMEOUT_SECONDS}s and was killed.\n")
+                append("Command timed out after ${timeout}s and was killed. ")
+                append("If it needs longer, raise the timeout in Settings > Tools > TurboFieldfare.\n")
             } else {
                 append("Exit code: ${result.exitCode}\n")
             }

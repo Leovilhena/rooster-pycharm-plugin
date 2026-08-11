@@ -44,6 +44,15 @@ class TurboFieldfareState {
 
     /** Small on purpose: a long completion is a long wait for something usually wrong. */
     var completionMaxTokens: Int = 64
+
+    /**
+     * The server's `--max-context`. Used only to warn the user before a
+     * conversation silently overflows it; the plugin cannot query it.
+     */
+    var maxContextTokens: Int = 16_384
+
+    /** How long an approved shell command may run before it is killed. */
+    var shellTimeoutSeconds: Int = 60
 }
 
 /**

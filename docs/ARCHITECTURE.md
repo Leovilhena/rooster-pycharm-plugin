@@ -210,12 +210,31 @@ tomorrow.
 | 6. Act-mode edit execution + undo | done |
 | 7. Shell tool + allow-list | done |
 | 8. Inline completion | done |
-| 9. Polish | not started |
+| 9. Polish | done |
+
+## Error messages and budgets
+
+- `TurboFieldfareClient.explain()` rewrites the server's terse 4xx bodies into
+  something actionable: a context overflow says to start a new chat or raise
+  `--max-context`; a rejected tool schema says so explicitly; an unknown model
+  points at the model id setting.
+- The panel warns once when the conversation passes 75% of the configured
+  context window. Without it, the failure mode is a sudden HTTP 400 several
+  turns later, which reads as "the plugin broke" rather than "this chat got
+  long". The estimate is characters/4 — crude on purpose; a 20% error does not
+  change the advice, and a real tokenizer would mean shipping the vocabulary.
+- `finish_reason: "length"` is surfaced in the transcript, so a truncated answer
+  is never mistaken for a complete one.
 
 ## Known Deviations from Plan
 
 - **Platform dependency is `local(...)`, not a downloaded `pycharmCommunity(...)`.**
   Reason: disk and bandwidth on this machine; the target IDE is installed already.
+- **The long-running shell command "prompt" is a configurable timeout, not a
+  dialog.** The plan called for prompting the user when a command runs long. A
+  fixed timeout that is visible and adjustable in Settings, and whose expiry is
+  reported to both the user and the model with a pointer to that setting, does
+  the same job without a modal appearing over the editor while a command runs.
 - **`FileEditApplier` has no `BasePlatformTestCase`.** The plan called for
   IntelliJ test fixtures here. Adding `testFramework(TestFrameworkType.Platform)`
   broke the plain-JUnit test runtime (the platform's JUnit5 session listener

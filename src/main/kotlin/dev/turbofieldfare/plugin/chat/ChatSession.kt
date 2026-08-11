@@ -26,5 +26,14 @@ class ChatSession {
 
     fun isEmpty(): Boolean = messages.isEmpty()
 
+    /**
+     * Rough token count: characters / 4.
+     *
+     * Deliberately crude. The point is to warn before the server refuses the next
+     * request, and being wrong by 20% does not change that advice — while running
+     * a real tokenizer would mean shipping the model's vocabulary.
+     */
+    fun approximateTokens(): Int = messages.sumOf { (it.content?.length ?: 0) } / 4
+
     fun clear() = messages.clear()
 }

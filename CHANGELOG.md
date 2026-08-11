@@ -51,3 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   separate switch for suggesting while typing and a configurable debounce.
   Suggestions insert with Tab; continued typing cancels the in-flight request
   rather than queuing it.
+- Readable errors: a conversation that outgrows the server's context window, a
+  rejected tool schema, and an unknown model id each say what to do about it.
+- A one-time warning when a chat passes 75% of the configured context window.
+- Configurable shell command timeout (default 60s); a killed command tells both
+  the user and the model, and points at the setting.

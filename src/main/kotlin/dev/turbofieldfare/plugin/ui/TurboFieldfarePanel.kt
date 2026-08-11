@@ -66,6 +66,9 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
 
     private var generation: Job? = null
 
+    /** So the context warning is shown once per crossing, not after every turn. */
+    private var contextWarningShown = false
+
     init {
         border = JBUI.Borders.empty(8)
         add(buildHeader(), BorderLayout.NORTH)
@@ -161,6 +164,7 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
             } finally {
                 withContext(Dispatchers.EDT + NonCancellable) {
                     transcript.appendText("\n")
+                    warnIfContextIsFilling()
                     setGenerating(false)
                 }
             }
@@ -199,6 +203,30 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
         scrollToBottom()
     }
 
+    /**
+     * Warns once the conversation is close to the server's context window.
+     *
+     * Without this the failure mode is a sudden HTTP 400 several turns later,
+     * which reads as "the plugin broke" rather than "this chat got long".
+     */
+    private fun warnIfContextIsFilling() {
+        val budget = TurboFieldfareSettings.getInstance().state.maxContextTokens
+        if (budget <= 0) return
+        val used = session.approximateTokens()
+        if (used < budget * CONTEXT_WARNING_FRACTION) {
+            contextWarningShown = false
+            return
+        }
+        if (contextWarningShown) return
+        contextWarningShown = true
+        transcript.endTextBlock()
+        transcript.appendText(
+            "\n[This chat is using roughly $used of the server's ~$budget token context. " +
+                "Start a new chat soon, or the server will start refusing requests.]\n"
+        )
+        transcript.endTextBlock()
+    }
+
     private fun scrollToBottom() {
         transcriptScroll.verticalScrollBar.let { it.value = it.maximum }
     }
@@ -231,5 +259,6 @@ class TurboFieldfarePanel(private val project: Project) : JPanel(BorderLayout())
     private companion object {
         const val POLL_INTERVAL_MS = 5_000L
         const val FALLBACK_MODEL = "gemma-4-26b-a4b-it"
+        const val CONTEXT_WARNING_FRACTION = 0.75
     }
 }

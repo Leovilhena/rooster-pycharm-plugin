@@ -97,7 +97,10 @@ class ToolExecutor(
                     }
 
                     is StreamEvent.ToolCalls -> calls = event.calls
-                    is StreamEvent.Finished -> Unit
+                    is StreamEvent.Finished ->
+                        if (event.reason == "length") {
+                            emit(LoopEvent.ToolActivity("The model stopped at its token limit; the answer is cut off."))
+                        }
                     is StreamEvent.Failed -> failure = event.message
                 }
             }

@@ -210,7 +210,32 @@ class TurboFieldfareClient(private val baseUrl: String = DEFAULT_BASE_URL) {
         } catch (e: JsonSyntaxException) {
             null
         }
-        return "Server returned HTTP ${response.statusCode()}: ${parsed ?: text.take(500).ifBlank { "no detail" }}"
+        val detail = parsed ?: text.take(500).ifBlank { "no detail" }
+        return explain(response.statusCode(), detail)
+    }
+
+    /**
+     * Turns a server error into something a user can act on.
+     *
+     * The raw messages are short and written for an API client, not a person
+     * staring at a chat panel who wants to know what to do next.
+     */
+    private fun explain(status: Int, detail: String): String {
+        val lower = detail.lowercase()
+        return when {
+            lower.contains("context") || lower.contains("too long") || lower.contains("max_context") ->
+                "This conversation no longer fits in the server's context window. " +
+                    "Start a new chat, or restart the server with a larger --max-context. ($detail)"
+
+            lower.contains("schema") || lower.contains("tool") && status == 400 ->
+                "The server rejected the tool definitions this plugin sent: $detail"
+
+            lower.contains("model") && status == 404 ->
+                "The server does not have the model this plugin asked for. " +
+                    "Clear the model id in Settings to use whatever the server is serving. ($detail)"
+
+            else -> "Server returned HTTP $status: $detail"
+        }
     }
 
     private fun describe(e: java.io.IOException): String = when (e) {
