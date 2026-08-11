@@ -1,5 +1,10 @@
 # TurboFieldfare for PyCharm
 
+[![CI](https://github.com/Leovilhena/turbofieldfare-pycharm-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Leovilhena/turbofieldfare-pycharm-plugin/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF.svg?logo=kotlin)](https://kotlinlang.org)
+[![Platform](https://img.shields.io/badge/PyCharm%20CE-2025.2.x-000000.svg?logo=pycharm)](https://www.jetbrains.com/pycharm/)
+
 An offline AI assistant that lives in a PyCharm CE tool window and talks to a
 [TurboFieldfare](../turbo-fieldfare) server running on `127.0.0.1`. No cloud, no
 telemetry, no fallback to a remote API — if the local server is down, the plugin

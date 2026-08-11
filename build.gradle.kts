@@ -16,7 +16,14 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        local(providers.gradleProperty("platformLocalPath"))
+        // Local dev builds against the installed PyCharm CE app (see gradle.properties)
+        // to avoid a ~1GB SDK download on this 8GB machine. CI has no local install, so
+        // it falls back to the standard downloadable artifact instead.
+        if (providers.environmentVariable("CI").isPresent) {
+            pycharmCommunity("2025.2.5")
+        } else {
+            local(providers.gradleProperty("platformLocalPath"))
+        }
         bundledPlugin("PythonCore")
     }
 

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- GitHub Actions CI (`.github/workflows/ci.yml`): build, unit tests, and plugin
+  structure verification on every push/PR to `main`, running on `ubuntu-latest`
+  against the downloadable `pycharmCommunity` platform artifact (local dev keeps
+  building against the installed PyCharm CE app; see `build.gradle.kts`).
+- `LICENSE` (Apache 2.0, matching the upstream TurboFieldfare project).
 - Plugin scaffolding: a **TurboFieldfare** tool window on the right-hand side of
   PyCharm CE 2025.2, currently an empty placeholder panel.
 - Server status line in the tool window: green "Connected" with the served model
