@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ROOSTER.md`: house rules for one project, in its root, loaded into every new
+  chat ahead of the memory index. You write it yourself in your own editor —
+  unlike memory, the assistant is never offered a way to change it. A project
+  without one sends nothing, and the transcript says when one was loaded.
 - `write_memory`: the assistant can propose remembering something — a project
   convention, or a preference that applies everywhere. It appears as the same
   diff card a file edit does, and nothing is saved until you click Apply. In

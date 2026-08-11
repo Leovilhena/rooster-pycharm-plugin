@@ -16,7 +16,7 @@ the code is the bug report.
 | `tools/` | Tool definitions (`ReadFile`, `ListFiles`, `SearchInFiles`, `ReadMemoryFile`, `ProposeEdit`, `WriteMemory`, `RunShellCommand`) and `ToolExecutor`, the client-side tool loop |
 | `planmode/` | `PlanModeStateMachine` — `PLAN` / `ACT`, the enforcement point |
 | `edit/` | `FileEditApplier` — `WriteCommandAction`-wrapped Document edits, undo-grouped; branches on `PathScope` |
-| `memory/` | `MemorySlug` (topic-name rule), `MemoryIndex` (directory scan → the always-loaded index), `GlobalMemory` (the application-scoped memory root) |
+| `memory/` | `MemorySlug` (topic-name rule), `MemoryIndex` (directory scan → the always-loaded index), `GlobalMemory` (the application-scoped memory root), `ProjectInstructions` (`ROOSTER.md`) |
 | `shell/` | `ShellCommandExecutor`, `ShellAllowListMatcher` |
 | `completion/` | Inline ghost-text completion provider (opt-in, off by default) |
 | `ui/` | Tool window, chat panel, diff cards, approval cards (plain Swing + `com.intellij.diff.*`) |
@@ -227,11 +227,24 @@ trusting the model to include it. A file missing the line still works — the
 index falls back to the filename — so a user can write memory files in their own
 editor and the plugin treats them as first-class.
 
-### Loading: the index is message 0
+### Loading: `ROOSTER.md` and the index are message 0
 
-`RoosterPanel.init` scans both directories once, at panel construction,
-and adds the index as a `system` message before any user turn — topic names and
-one-line titles only, never bodies. That is the whole point of the split: the
+`RoosterPanel.loadSystemContext` builds one `system` message at panel
+construction, before any user turn: the project's `ROOSTER.md` first, then the
+memory index, joined by a blank line. Either half is omitted when it has nothing
+to say, and the message is skipped entirely when both do.
+
+`ROOSTER.md` is a fixed, root-relative file the user writes by hand — house
+rules, in the CLAUDE.md/AGENTS.md sense. It leads because it is directive and
+the index is reference: "follow these" before "here is what you can look up".
+It is deliberately *not* memory. Memory is proposed by the model and approved a
+card at a time; this file has no tool and no card, because there is nothing in
+it for the model to change. `ProjectInstructions.read` also needs no
+`ProjectFiles` confinement — that machinery exists to stop a model-supplied path
+escaping the project, and this path is a constant.
+
+The index half scans both memory directories once — topic names and one-line
+titles only, never bodies. That is the whole point of the split: the
 fixed per-session cost stays a few hundred tokens no matter how much memory
 accumulates, and the model spends the rest only on the topic it decides it
 needs. A line in the transcript says how many topics were loaded, because
@@ -424,6 +437,18 @@ tomorrow.
   platform fixture this repo does not use. The overload mirrors the one
   `ProjectFiles.resolve` already has, and `FileEditApplierTest` covers both
   branches through it.
+- **`ROOSTER.md`'s ordering is unverified in a running IDE.** `ProjectInstructions.read`
+  is covered by `ProjectInstructionsTest` (present, absent, blank, no-root,
+  directory-in-the-way), and the sandbox was confirmed to start with the plugin
+  loaded, the new ids in place and settings reset to defaults. What was not
+  observed is the composed system message itself: the tool window is constructed
+  only when a human opens it, and this environment grants no screen recording
+  permission (`screencapture` returns a black frame) and no usable accessibility
+  tree, so the panel cannot be opened or read. The composition it performs is
+  `listOfNotNull(instructions, index).joinToString("\n\n")` — ordering is
+  positional and has no branch in it — but "instructions actually appear ahead
+  of the index in what the server receives" is asserted by reading, not by
+  running.
 - **The rename to Rooster drops the state it used to read, on purpose.** The
   settings file moved from `turbofieldfare.xml` to `rooster.xml`, the tool
   window id from `TurboFieldfare` to `Rooster`, and both memory directories

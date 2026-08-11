@@ -12,6 +12,7 @@ import dev.rooster.plugin.client.ServerStatus
 import dev.rooster.plugin.client.RoosterClient
 import dev.rooster.plugin.memory.GlobalMemory
 import dev.rooster.plugin.memory.MemoryIndex
+import dev.rooster.plugin.memory.ProjectInstructions
 import dev.rooster.plugin.planmode.PlanModeState
 import dev.rooster.plugin.planmode.PlanModeStateMachine
 import dev.rooster.plugin.settings.RoosterSettings
@@ -86,7 +87,7 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
         }
         refreshModeButton()
 
-        loadMemoryIndex()
+        loadSystemContext()
 
         sendButton.addActionListener { onSendOrCancel() }
         modeButton.addActionListener { toggleMode() }
@@ -95,33 +96,48 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
     }
 
     /**
-     * Puts the memory index in front of the model as message 0, before any user turn.
+     * Puts everything the model should know before the first user turn into
+     * message 0: the project's `ROOSTER.md`, then the memory index.
      *
-     * A short list of topic names and one-line titles only — never the topic
-     * bodies. That is the whole point of the split: the fixed per-session cost
-     * stays a few hundred tokens no matter how much memory accumulates, and the
-     * model spends the rest only on the one topic it decides it needs, via
-     * `read_memory_file`.
+     * That order is the point. `ROOSTER.md` is directive — house rules the user
+     * wrote by hand — and the index is reference material, a list of what can be
+     * looked up. Instructions lead, the way they do in the CLAUDE.md/AGENTS.md
+     * convention this file deliberately imitates.
      *
-     * Skipped entirely when both directories are empty, rather than sending a
-     * "(nothing yet)" placeholder — on a fresh install that would spend tokens
-     * every session to describe a system that has nothing in it.
+     * The index is a short list of topic names and one-line titles only — never
+     * the topic bodies. That is the whole point of the split: the fixed
+     * per-session cost stays a few hundred tokens no matter how much memory
+     * accumulates, and the model spends the rest only on the one topic it decides
+     * it needs, via `read_memory_file`.
+     *
+     * Either half is skipped entirely when it has nothing to say, rather than
+     * sending a "(nothing yet)" placeholder — on a fresh install that would spend
+     * tokens every session to describe a system that has nothing in it.
      *
      * The snapshot is taken once here and never rewritten, matching `ChatSession`'s
      * "no summarisation, no truncation, no reordering" rule. Only the *list* can go
      * stale, and only against a hand-edit made mid-session; `read_memory_file`
      * always reads live from disk, so nothing fetched is ever stale.
      */
-    private fun loadMemoryIndex() {
+    private fun loadSystemContext() {
+        val instructions = ProjectInstructions.read(ProjectFiles.root(project))
         val projectDir = ProjectFiles.resolve(project, PROJECT_MEMORY_DIR)
-        val index = MemoryIndex.message(projectDir, GlobalMemory.root()) ?: return
+        val index = MemoryIndex.message(projectDir, GlobalMemory.root())
 
-        session.add(ChatMessage(role = "system", content = index))
+        val combined = listOfNotNull(instructions, index).joinToString("\n\n")
+        if (combined.isBlank()) return
+        session.add(ChatMessage(role = "system", content = combined))
+
         // Said out loud: this is context the user is spending without having typed
-        // anything, and an answer shaped by a memory file they forgot they wrote
-        // should not look like the model inventing house rules.
-        val topics = index.lines().count { it.startsWith("- ") }
-        transcript.appendText("[loaded $topics memory ${if (topics == 1) "topic" else "topics"}]\n")
+        // anything, and an answer shaped by a file they forgot they wrote should
+        // not look like the model inventing house rules.
+        if (instructions != null) {
+            transcript.appendText("[loaded ROOSTER.md]\n")
+        }
+        if (index != null) {
+            val topics = index.lines().count { it.startsWith("- ") }
+            transcript.appendText("[loaded $topics memory ${if (topics == 1) "topic" else "topics"}]\n")
+        }
         transcript.endTextBlock()
     }
 

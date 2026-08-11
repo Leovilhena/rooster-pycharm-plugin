@@ -34,6 +34,9 @@ says so and does nothing.
   writing a memory, but it appears as the same diff card an edit does and
   nothing is saved until you click Apply. Write the files by hand if you prefer
   — the plugin reads whatever is there.
+- **Reads `ROOSTER.md`** from your project root, if you write one — house rules
+  loaded into every new chat, ahead of the memory index. Same idea as
+  `CLAUDE.md` or `AGENTS.md`: you write it, the assistant only reads it.
 - **Inline ghost-text completion**, off by default (see below).
 
 ## Safety model
