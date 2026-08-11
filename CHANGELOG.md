@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Inline completion now only fires for Python and shell files (`py`, `pyi`,
+  `sh`, `bash`, `zsh`) — every other file type skips the request entirely.
+  The extension check is a pure function, `isSupportedCompletionExtension`,
+  covered by a plain unit test.
+- Inline completion's context window shrunk from 1500/300 prefix/suffix
+  characters to 600/150. Fewer prompt tokens means less prefill time before
+  decode even starts, which is most of what's addressable on a ~5 tok/s
+  local decoder — this doesn't make the model faster, it makes each request
+  smaller.
+
 ### Added
 
 - GitHub Actions CI (`.github/workflows/ci.yml`): build, unit tests, and plugin

@@ -59,6 +59,13 @@ tends to arrive after you have typed past it. Two switches in Settings — enabl
 it at all, and enable it *while typing* — plus a debounce. With the second one
 off, completions appear only when you ask for them explicitly.
 
+Only fires for Python and shell files (`.py`, `.pyi`, `.sh`, `.bash`, `.zsh`) —
+every other file type is skipped before a request is ever sent. The prompt
+sent per request is also intentionally short (600 characters before the
+cursor, 150 after): fewer prompt tokens means less prefill time before decode
+even starts, which is most of the latency that's actually addressable on a
+local ~5 tok/s decoder.
+
 ## Settings
 
 **Settings → Tools → TurboFieldfare**: server host and port, model id, Plan-mode

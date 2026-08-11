@@ -8,6 +8,7 @@ import com.intellij.codeInsight.inline.completion.elements.InlineCompletionGrayT
 import com.intellij.codeInsight.inline.completion.suggestion.InlineCompletionSingleSuggestion
 import com.intellij.codeInsight.inline.completion.suggestion.InlineCompletionSuggestion
 import com.intellij.openapi.application.readAction
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import dev.turbofieldfare.plugin.client.ChatMessage
 import dev.turbofieldfare.plugin.client.ChatRequest
 import dev.turbofieldfare.plugin.client.StreamEvent
@@ -16,6 +17,15 @@ import dev.turbofieldfare.plugin.settings.TurboFieldfareSettings
 import kotlinx.coroutines.flow.collect
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+
+/**
+ * Whether [extension] is a file type this local model is actually used for.
+ *
+ * A pure function so it's testable without an IntelliJ Platform test fixture —
+ * everything else in this file needs one, this doesn't have to.
+ */
+internal fun isSupportedCompletionExtension(extension: String?): Boolean =
+    extension?.lowercase() in setOf("py", "pyi", "sh", "bash", "zsh")
 
 /**
  * Ghost-text completion from the local model.
@@ -60,12 +70,18 @@ class TurboFieldfareInlineCompletionProvider : DebouncedInlineCompletionProvider
 
         // Document access needs a read action; the text is copied out immediately so
         // nothing else here runs under the lock.
-        val (prefix, suffix) = readAction {
+        val (prefix, suffix, supported) = readAction {
+            val extension = FileDocumentManager.getInstance().getFile(request.document)?.extension?.lowercase()
             val text = request.document.immutableCharSequence
             val start = (offset - PREFIX_CHARS).coerceAtLeast(0)
             val end = (offset + SUFFIX_CHARS).coerceAtMost(text.length)
-            text.subSequence(start, offset).toString() to text.subSequence(offset, end).toString()
+            Triple(
+                text.subSequence(start, offset).toString(),
+                text.subSequence(offset, end).toString(),
+                isSupportedCompletionExtension(extension),
+            )
         }
+        if (!supported) return InlineCompletionSuggestion.Empty
 
         if (prefix.isBlank()) return InlineCompletionSuggestion.Empty
 
@@ -122,8 +138,11 @@ class TurboFieldfareInlineCompletionProvider : DebouncedInlineCompletionProvider
     }
 
     private companion object {
-        const val PREFIX_CHARS = 1_500
-        const val SUFFIX_CHARS = 300
+        // Cut from 1500/300: fewer prompt tokens means less prefill before decode
+        // even starts, which is most of what's addressable on a ~5 tok/s decoder.
+        const val PREFIX_CHARS = 600
+        const val SUFFIX_CHARS = 150
+
         const val FALLBACK_MODEL = "gemma-4-26b-a4b-it"
         const val SYSTEM_PROMPT =
             "You complete code. Output only the text that should be inserted at the cursor. " +
