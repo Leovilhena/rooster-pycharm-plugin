@@ -156,8 +156,12 @@ class ToolExecutor(
         // place a tool actually runs. Nothing between here and tool.execute().
         when (val decision = gate(tool, planMode.current())) {
             is GateDecision.Refuse -> {
+                // No argument dump: the refusal reason is already in the text
+                // returned to the model, and the preview card above says what the
+                // change would have been. The transcript only owes the user the
+                // fact that nothing ran.
                 preview?.let { emit(LoopEvent.EditProposed(it, blocked = true)) }
-                emit(LoopEvent.ToolActivity("Plan mode — did not run $name(${summarise(arguments)})"))
+                emit(LoopEvent.ToolActivity("Plan mode blocked \"$name\". Nothing was run."))
                 return decision.message
             }
 
@@ -166,7 +170,12 @@ class ToolExecutor(
 
         preview?.let { emit(LoopEvent.EditProposed(it, blocked = false)) }
 
-        emit(LoopEvent.ToolActivity("$name(${summarise(arguments)})"))
+        // Deliberately silent. Every effectful tool already draws its own card
+        // (`propose_edit`/`write_memory` a proposal, `run_shell_command` an
+        // approval), so a `name(args)` line above it repeats what the card says.
+        // And a read-only tool the model calls five times in one turn would emit
+        // five lines of noise for work the user did not ask to watch — the
+        // elapsed-time indicator already says something is happening.
         return try {
             tool.execute(project, arguments)
         } catch (e: Exception) {
@@ -187,11 +196,6 @@ class ToolExecutor(
             null
         }
     }
-
-    private fun summarise(arguments: JsonObject): String =
-        arguments.entrySet().joinToString(", ") { (key, value) ->
-            "$key=${value.toString().take(60)}"
-        }
 
     companion object {
         private const val DEFAULT_MAX_ITERATIONS = 8

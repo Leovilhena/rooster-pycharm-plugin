@@ -204,6 +204,18 @@ Rooster turns get one warm amber, deliberately far from `StatusDot`'s green.
 The transcript's own voice (`[loaded ROOSTER.md]`, mode switches, the context
 warning) stays a plain text block with no bubble: it is nobody's turn.
 
+**Tool activity is not narrated.** `ToolExecutor` emits `LoopEvent.ToolActivity`
+from five sites, all of them things that went *wrong* or were refused: token-limit
+cutoff, malformed call, unknown tool, unparseable arguments, Plan-mode refusal.
+Each is one human-worded line and none dumps arguments.
+
+There is deliberately **no line for a successful call**. Every effectful tool
+already draws its own card (`propose_edit`/`write_memory` a proposal,
+`run_shell_command` an approval), so a `name(args)` line above it repeats what
+the card says; and a read-only tool the model calls five times in one turn would
+emit five lines of noise for work nobody asked to watch. The elapsed-time
+indicator covers "something is happening". That overlap is the design, not a gap.
+
 **Copy button.** Assistant bubbles only, bottom-right of the footer. It reads
 `ChatSession.lastAssistantText()` — the history, not the rendered bubble — so a
 copy is what the model said even if the rendering ever diverges. That method
@@ -450,7 +462,7 @@ tomorrow.
 | A. Font | done |
 | B. Message bubbles | done |
 | C. Copy button | done |
-| D. Tool-call display | not started |
+| D. Tool-call display | done |
 | E. Thinking indicator | not started |
 | F. Context attachments | not started |
 

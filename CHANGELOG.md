@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The transcript no longer dumps raw tool-call syntax.** Lines like
+  `write_memory(content="...", scope="global")` are gone: every effectful tool
+  already shows a proposal or approval card, so the line only repeated it, and
+  read-only tools now run silently instead of emitting one line per call. The
+  five lines that remain are all refusals or failures, worded for a human and
+  with no arguments in them.
 - **Each turn in the chat is now its own bordered block with a `You` / `Rooster`
   header**, replacing the literal `"You: ... Assistant: "` text prefix that ran
   every turn together into one undifferentiated wall of text. Rooster's turns are
