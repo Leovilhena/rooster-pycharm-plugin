@@ -47,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A copy button on Rooster's answers**, bottom-right of the bubble. It copies
+  what the model actually said, read from the conversation history rather than
+  scraped from the panel, and shows a tick for a moment so a clipboard write
+  isn't silent. There is deliberately no copy button on your own messages.
 - `ROOSTER.md`: house rules for one project, in its root, loaded into every new
   chat ahead of the memory index. You write it yourself in your own editor —
   unlike memory, the assistant is never offered a way to change it. A project

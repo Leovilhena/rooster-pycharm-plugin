@@ -27,6 +27,17 @@ class ChatSession {
     fun isEmpty(): Boolean = messages.isEmpty()
 
     /**
+     * The most recent thing the model actually said, for the copy button.
+     *
+     * Read from the history rather than scraped out of the bubble, so a copy is
+     * what the model said even if the rendering ever diverges from it. Assistant
+     * messages carrying only `tool_calls` have no prose and are skipped — copying
+     * an empty string because the last turn was a tool call is not a copy.
+     */
+    fun lastAssistantText(): String? =
+        messages.lastOrNull { it.role == "assistant" && !it.content.isNullOrBlank() }?.content
+
+    /**
      * Rough token count: characters / 4.
      *
      * Deliberately crude. The point is to warn before the server refuses the next

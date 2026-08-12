@@ -204,6 +204,18 @@ Rooster turns get one warm amber, deliberately far from `StatusDot`'s green.
 The transcript's own voice (`[loaded ROOSTER.md]`, mode switches, the context
 warning) stays a plain text block with no bubble: it is nobody's turn.
 
+**Copy button.** Assistant bubbles only, bottom-right of the footer. It reads
+`ChatSession.lastAssistantText()` — the history, not the rendered bubble — so a
+copy is what the model said even if the rendering ever diverges. That method
+skips assistant messages carrying only `tool_calls`, which have no prose;
+without the skip, copying after a tool-using turn would put nothing on the
+clipboard. The clipboard write is invisible, so the icon swaps to a tick for
+1.2s via a one-shot `javax.swing.Timer`.
+
+`InplaceButton` has **no single-icon constructor** — the real signatures are
+`(String tooltip, Icon, ActionListener)` and `(IconButton, ActionListener)`,
+confirmed with `javap` against the installed platform.
+
 **Wrapping a text area inside a `BoxLayout` column takes three cooperating
 parts**, and getting any one wrong pins a whole streamed answer to a single
 clipped line — verified by rendering the panel offscreen, not by reading it:
@@ -437,7 +449,7 @@ tomorrow.
 | --- | --- |
 | A. Font | done |
 | B. Message bubbles | done |
-| C. Copy button | not started |
+| C. Copy button | done |
 | D. Tool-call display | not started |
 | E. Thinking indicator | not started |
 | F. Context attachments | not started |

@@ -27,7 +27,7 @@ fun chatFont(): java.awt.Font = JBFont.label().let { it.deriveFont(it.size + 1f)
  * buttons, and a button the user can click is the whole point of the approval
  * flow — so the transcript has to hold components, not just text.
  */
-class TranscriptPanel : JPanel(), Scrollable {
+class TranscriptPanel(private val lastAssistantText: () -> String? = { null }) : JPanel(), Scrollable {
 
     private var currentText: JBTextArea? = null
     private var currentBubble: MessageBubble? = null
@@ -56,7 +56,8 @@ class TranscriptPanel : JPanel(), Scrollable {
     }
 
     /** Opens Rooster's turn, so the header is there before the first token is. */
-    fun startAssistantMessage(): MessageBubble = addBubble(MessageBubble.rooster())
+    fun startAssistantMessage(): MessageBubble =
+        addBubble(MessageBubble.rooster().apply { addCopyButton(lastAssistantText) })
 
     /**
      * Streams a fragment of model prose into the open Rooster bubble.

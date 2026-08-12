@@ -59,7 +59,7 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
 
     private val statusDot = StatusDot()
     private val modeButton = JButton()
-    private val transcript = TranscriptPanel()
+    private val transcript = TranscriptPanel { session.lastAssistantText() }
     private val transcriptScroll = JBScrollPane(transcript)
     private val composer = JBTextArea(3, 20).apply {
         lineWrap = true

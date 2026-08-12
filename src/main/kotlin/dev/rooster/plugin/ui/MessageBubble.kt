@@ -1,5 +1,8 @@
 package dev.rooster.plugin.ui
 
+import com.intellij.icons.AllIcons
+import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.ui.InplaceButton
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
@@ -10,7 +13,10 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.FlowLayout
+import java.awt.datatransfer.StringSelection
+import java.awt.event.ActionListener
 import javax.swing.JPanel
+import javax.swing.Timer
 
 /**
  * One conversational turn, as a bordered block with a "who said it" header.
@@ -66,8 +72,27 @@ class MessageBubble private constructor(who: String, accent: Color) : JPanel(Bor
         columnWidth = width
     }
 
-    fun addFooter(component: Component) {
-        footer.add(component)
+    /**
+     * Puts a copy button in this bubble's footer.
+     *
+     * Assistant turns only: the user's own text is already in their clipboard
+     * history from having typed it, and the real want is copying a generated
+     * answer. [source] is read at click time, not at build time — the bubble is
+     * opened before the model has said anything.
+     */
+    fun addCopyButton(source: () -> String?) {
+        lateinit var button: InplaceButton
+        button = InplaceButton("Copy this answer", AllIcons.Actions.Copy, ActionListener {
+            val text = source()
+            if (text.isNullOrEmpty()) return@ActionListener
+            CopyPasteManager.getInstance().setContents(StringSelection(text))
+            // A clipboard write is invisible; the tick is the only confirmation.
+            button.icon = AllIcons.Actions.Checked
+            Timer(FEEDBACK_MS) { button.icon = AllIcons.Actions.Copy }
+                .apply { isRepeats = false }
+                .start()
+        })
+        footer.add(button)
         footer.isVisible = true
     }
 
@@ -97,6 +122,9 @@ class MessageBubble private constructor(who: String, accent: Color) : JPanel(Bor
     companion object {
         /** Warm amber, both themes. Deliberately far from `StatusDot`'s green. */
         private val ROOSTER_ACCENT = JBColor(0xB8791F, 0xD9A441)
+
+        /** How long the copy button shows a tick before going back to the icon. */
+        private const val FEEDBACK_MS = 1_200
 
         fun user(): MessageBubble = MessageBubble("You", JBColor.border())
 
