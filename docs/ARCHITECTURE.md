@@ -194,6 +194,31 @@ both the IDE theme and the user's font-size setting. The extra point applies to
 prose read at length (transcript body, composer) only; chrome keeps the existing
 `UIUtil.ComponentStyle.SMALL` convention.
 
+**Bubbles.** Each conversational turn is a `MessageBubble`: a header (`You` /
+`Rooster`) over the same non-editable wrapping `JBTextArea` the transcript used
+before, so streaming appends into it unchanged. Border and header colour carry
+the distinction — no filled background, which would mean a second per-theme
+colour to get wrong for no extra information. User turns reuse `JBColor.border()`;
+Rooster turns get one warm amber, deliberately far from `StatusDot`'s green.
+
+The transcript's own voice (`[loaded ROOSTER.md]`, mode switches, the context
+warning) stays a plain text block with no bubble: it is nobody's turn.
+
+**Wrapping a text area inside a `BoxLayout` column takes three cooperating
+parts**, and getting any one wrong pins a whole streamed answer to a single
+clipped line — verified by rendering the panel offscreen, not by reading it:
+
+1. `TranscriptPanel` implements `Scrollable` with
+   `getScrollableTracksViewportWidth() = true`. Otherwise the viewport uses the
+   view's *preferred* width, and a column of wrapping text areas prefers one very
+   long line, so the chat scrolls sideways instead of wrapping.
+2. `TranscriptPanel.doLayout()` pushes the column width into every bubble before
+   `BoxLayout` asks how tall it wants to be. `BoxLayout` asks for sizes before it
+   assigns widths, so without this the first answer is "one very long line".
+3. `MessageBubble.getPreferredSize()` sizes the body to that width first, forcing
+   a re-wrap, and `getMaximumSize()` clamps the height to the wrapped result so
+   one turn cannot eat the whole column.
+
 ## Memory
 
 Persistent facts that survive across chat sessions, in two independent scopes:
@@ -411,7 +436,7 @@ tomorrow.
 | Phase | State |
 | --- | --- |
 | A. Font | done |
-| B. Message bubbles | not started |
+| B. Message bubbles | done |
 | C. Copy button | not started |
 | D. Tool-call display | not started |
 | E. Thinking indicator | not started |

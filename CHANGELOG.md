@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Each turn in the chat is now its own bordered block with a `You` / `Rooster`
+  header**, replacing the literal `"You: ... Assistant: "` text prefix that ran
+  every turn together into one undifferentiated wall of text. Rooster's turns are
+  outlined in amber, yours in the standard border colour. The transcript's own
+  notes (loaded files, mode switches, context warnings) stay unadorned — they are
+  nobody's turn.
 - Chat text now uses the IDE's own font (`JBFont.label()`, one point larger for
   prose) instead of Swing's raw default, so the transcript and composer follow
   the active theme and the IDE's font-size setting rather than ignoring both.

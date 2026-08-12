@@ -203,8 +203,8 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
 
     private fun send(text: String) {
         session.addUser(text)
-        transcript.endTextBlock()
-        transcript.appendText("\nYou: $text\n\nAssistant: ")
+        transcript.startUserMessage(text)
+        transcript.startAssistantMessage()
         setGenerating(true)
 
         val configuredModel = RoosterSettings.getInstance().state.modelId.ifBlank { null }
@@ -218,7 +218,7 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
                 }
             } finally {
                 withContext(Dispatchers.EDT + NonCancellable) {
-                    transcript.appendText("\n")
+                    transcript.endTextBlock()
                     warnIfContextIsFilling()
                     setGenerating(false)
                 }
@@ -243,7 +243,7 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
 
     private fun render(event: LoopEvent) {
         when (event) {
-            is LoopEvent.Text -> transcript.appendText(event.text)
+            is LoopEvent.Text -> transcript.appendAssistant(event.text)
             is LoopEvent.ToolActivity -> {
                 transcript.endTextBlock()
                 transcript.appendText("  · ${event.detail}\n")
