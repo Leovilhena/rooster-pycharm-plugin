@@ -53,6 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **An elapsed-time indicator while Rooster is working**, below the composer:
+  `Roosting on it… (1m 12s)`, counting up every second and rotating through a
+  handful of phrases every five. On a local server at a few tokens a second, a
+  panel that sits still is otherwise indistinguishable from one that has hung.
+  It disappears when the answer arrives or you press Cancel, and takes up no
+  space at all when idle.
 - **A copy button on Rooster's answers**, bottom-right of the bubble. It copies
   what the model actually said, read from the conversation history rather than
   scraped from the panel, and shows a tick for a moment so a clipboard write

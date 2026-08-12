@@ -67,6 +67,7 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
         font = chatFont()
     }
     private val sendButton = JButton("Send")
+    private val thinking = ThinkingIndicator()
 
     @Volatile
     private var serverModel: String? = null
@@ -152,6 +153,7 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
         border = JBUI.Borders.emptyTop(8)
         add(JBScrollPane(composer), BorderLayout.CENTER)
         add(sendButton, BorderLayout.EAST)
+        add(thinking, BorderLayout.SOUTH)
     }
 
     /**
@@ -288,6 +290,7 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
 
     private fun setGenerating(generating: Boolean) {
         sendButton.text = if (generating) "Cancel" else "Send"
+        if (generating) thinking.start() else thinking.stop()
     }
 
     private fun client(): RoosterClient {

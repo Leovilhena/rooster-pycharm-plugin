@@ -204,6 +204,21 @@ Rooster turns get one warm amber, deliberately far from `StatusDot`'s green.
 The transcript's own voice (`[loaded ROOSTER.md]`, mode switches, the context
 warning) stays a plain text block with no bubble: it is nobody's turn.
 
+**Thinking indicator.** `ThinkingIndicator` is a `JBLabel` below the composer
+reading e.g. `Roosting on it… (1m 12s)`. Invisible when idle rather than
+blank-but-present — reserving a permanent strip of chrome for text that is
+usually absent is worse than a label that appears. It exists because a local
+generation at ~5 tokens/second is slow enough that a still panel is
+indistinguishable from a hung one.
+
+Driven by a `javax.swing.Timer`, not a coroutine: this is a pure "update a label
+once a second on the EDT" concern with no reason to reach into the suspend-based
+generation loop. Started and stopped inside the existing `setGenerating()`, which
+the generation's `finally` already calls on both completion and cancellation — no
+new lifecycle branch. The counter ticks every second but the phrase changes only
+every five; cycling words once a second is distracting, not helpful. `formatElapsed`
+and `phraseFor` are pure and unit-tested.
+
 **Tool activity is not narrated.** `ToolExecutor` emits `LoopEvent.ToolActivity`
 from five sites, all of them things that went *wrong* or were refused: token-limit
 cutoff, malformed call, unknown tool, unparseable arguments, Plan-mode refusal.
@@ -463,7 +478,7 @@ tomorrow.
 | B. Message bubbles | done |
 | C. Copy button | done |
 | D. Tool-call display | done |
-| E. Thinking indicator | not started |
+| E. Thinking indicator | done |
 | F. Context attachments | not started |
 
 ## Error messages and budgets
