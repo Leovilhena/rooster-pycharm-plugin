@@ -204,6 +204,39 @@ Rooster turns get one warm amber, deliberately far from `StatusDot`'s green.
 The transcript's own voice (`[loaded ROOSTER.md]`, mode switches, the context
 warning) stays a plain text block with no bubble: it is nobody's turn.
 
+## Editor context attachments
+
+Right-click in the editor → **Attach to Rooster Chat**. With a selection it
+attaches those lines; with none, the whole file — Copilot Chat's own fallback,
+and what "attach this file" means when the caret is just sitting somewhere.
+Right-click is the only trigger: it is the one direct gesture for "this bit,
+here", and a toolbar button would duplicate the selection logic on a second
+surface with no evidence anyone reaches for it first.
+
+`RoosterAttachments` is a project service holding what is queued for the *next*
+message. Not persisted: an attachment is something picked a moment ago for the
+sentence about to be typed, not a setting. Content is snapshotted at attach time
+from the editor's `Document` — the document rather than disk, so attaching after
+an unsaved edit attaches what the user is looking at; snapshotted rather than
+re-read, mirroring `EditPreview`, so what was attached is what gets sent.
+
+**Attachments reach the model as prepended text, not a new wire field.**
+`ChatMessage` carries exactly one `content` string, and extending the wire shape
+would need server support this plugin cannot assume plus a change to the captured
+fixture `WireTest` depends on. It has to become text before sending regardless,
+so `RoosterPanel.withAttachments()` builds labelled blocks
+(`--- main.py:12-34 ---` … `--- end ---`) in front of the typed text and hands the
+single string to `session.addUser()`. `ChatSession`/`ChatMessage` are untouched.
+A consequence worth having: the attached text appears verbatim in the user's own
+bubble, so the transcript the user reads is still the transcript the model saw.
+
+Sending drains the queue — an attachment is sent once, not stapled to every
+message after it.
+
+The `<action>` registration uses an `<add-to-group group-id="EditorPopupMenu">`
+child, the shape confirmed by extracting the bundled Markdown plugin's real
+`plugin.xml`. This is the plugin's first `<actions>` block.
+
 **Thinking indicator.** `ThinkingIndicator` is a `JBLabel` below the composer
 reading e.g. `Roosting on it… (1m 12s)`. Invisible when idle rather than
 blank-but-present — reserving a permanent strip of chrome for text that is
@@ -479,7 +512,7 @@ tomorrow.
 | C. Copy button | done |
 | D. Tool-call display | done |
 | E. Thinking indicator | done |
-| F. Context attachments | not started |
+| F. Context attachments | done |
 
 ## Error messages and budgets
 

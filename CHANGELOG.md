@@ -53,6 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Attach editor context to a message.** Select lines in the editor, right-click,
+  and pick *Attach to Rooster Chat*; with nothing selected it attaches the whole
+  file. A chip appears above the composer showing `main.py:12-34`, removable with
+  its x, and the code is sent with your next message and only that one. The
+  attached text appears in your own message exactly as the model receives it —
+  there is no hidden context.
 - **An elapsed-time indicator while Rooster is working**, below the composer:
   `Roosting on it… (1m 12s)`, counting up every second and rotating through a
   handful of phrases every five. On a local server at a few tokens a second, a

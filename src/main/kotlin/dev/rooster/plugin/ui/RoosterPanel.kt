@@ -7,6 +7,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import dev.rooster.plugin.chat.ChatSession
+import dev.rooster.plugin.chat.RoosterAttachments
 import dev.rooster.plugin.client.ChatMessage
 import dev.rooster.plugin.client.ServerStatus
 import dev.rooster.plugin.client.RoosterClient
@@ -34,6 +35,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
+import java.awt.FlowLayout
 import java.awt.event.ActionEvent
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
@@ -69,6 +71,16 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
     private val sendButton = JButton("Send")
     private val thinking = ThinkingIndicator()
 
+    private val attachments = RoosterAttachments.getInstance(project)
+
+    /** Empty and invisible with nothing attached — no permanently reserved strip. */
+    // ponytail: a single FlowLayout row, so a lot of attachments run off the right
+    // edge rather than wrapping. WrapLayout or a scroll pane if anyone ever queues
+    // more than a few; three chips fit a normal tool window comfortably.
+    private val chipRow = JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply {
+        isVisible = false
+    }
+
     @Volatile
     private var serverModel: String? = null
 
@@ -90,6 +102,11 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
         refreshModeButton()
 
         loadSystemContext()
+
+        // The action pushing an attachment runs on the EDT already, so the chip
+        // row can be rebuilt straight from the callback.
+        attachments.onChange { refreshChips() }
+        refreshChips()
 
         sendButton.addActionListener { onSendOrCancel() }
         modeButton.addActionListener { toggleMode() }
@@ -151,9 +168,22 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
 
     private fun buildComposer(): JComponent = JPanel(BorderLayout()).apply {
         border = JBUI.Borders.emptyTop(8)
+        add(chipRow, BorderLayout.NORTH)
         add(JBScrollPane(composer), BorderLayout.CENTER)
         add(sendButton, BorderLayout.EAST)
         add(thinking, BorderLayout.SOUTH)
+    }
+
+    /** Rebuilt wholesale on every change: at most a handful of chips. */
+    private fun refreshChips() {
+        chipRow.removeAll()
+        val pending = attachments.all()
+        pending.forEach { attachment ->
+            chipRow.add(AttachmentChip(attachment) { attachments.remove(attachment) })
+        }
+        chipRow.isVisible = pending.isNotEmpty()
+        chipRow.revalidate()
+        chipRow.repaint()
     }
 
     /**
@@ -200,7 +230,27 @@ class RoosterPanel(private val project: Project) : JPanel(BorderLayout()), Dispo
         val text = composer.text.trim()
         if (text.isEmpty()) return
         composer.text = ""
-        send(text)
+        send(withAttachments(text))
+    }
+
+    /**
+     * Turns pending attachments into text in front of what the user typed.
+     *
+     * Prepended as plain labelled blocks rather than a new wire-format field:
+     * `ChatMessage` carries exactly one `content` string, and extending the wire
+     * shape would need server support this plugin cannot assume. It has to become
+     * text before sending regardless.
+     *
+     * Because it is one string, the attached text also appears verbatim in the
+     * user's own bubble — which keeps this project's rule that the transcript the
+     * user reads is the transcript the model saw.
+     *
+     * Drains: an attachment is sent once, not on every subsequent message.
+     */
+    private fun withAttachments(text: String): String {
+        val pending = attachments.drain()
+        if (pending.isEmpty()) return text
+        return pending.joinToString("\n\n") { it.asPrompt() } + "\n\n" + text
     }
 
     private fun send(text: String) {

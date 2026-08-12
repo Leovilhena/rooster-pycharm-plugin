@@ -28,4 +28,15 @@
                     icon="AllIcons.Toolwindows.ToolWindowMessages"
                     factoryClass="dev.rooster.plugin.ui.RoosterToolWindowFactory"/>
     </extensions>
+
+    <actions>
+        <!-- Shape verified against the bundled Markdown plugin's own plugin.xml:
+             an <add-to-group> child naming group-id="EditorPopupMenu". -->
+        <action id="Rooster.AttachSelection"
+                class="dev.rooster.plugin.ui.AttachSelectionAction"
+                text="Attach to Rooster Chat"
+                description="Send the selected lines (or the whole file) to Rooster with your next message">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </action>
+    </actions>
 </idea-plugin>
