@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Rooster has a mascot**, in the README, and the plugin now ships an icon so it
+  is not a blank square in the plugins list. Light variant only: knocking the
+  white background out for a dark variant leaves a visible halo around the
+  artwork, and the platform falls back to the light icon cleanly.
 - **Attach editor context to a message.** Select lines in the editor, right-click,
   and pick *Attach to Rooster Chat*; with nothing selected it attaches the whole
   file. A chip appears above the composer showing `main.py:12-34`, removable with

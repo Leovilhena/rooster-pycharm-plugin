@@ -1,5 +1,7 @@
 # Rooster for PyCharm
 
+<img src="docs/assets/mascot.png" alt="The Rooster mascot" width="180">
+
 [![CI](https://github.com/Leovilhena/rooster-pycharm-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Leovilhena/rooster-pycharm-plugin/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF.svg?logo=kotlin)](https://kotlinlang.org)

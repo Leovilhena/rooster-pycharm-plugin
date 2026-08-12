@@ -204,6 +204,27 @@ Rooster turns get one warm amber, deliberately far from `StatusDot`'s green.
 The transcript's own voice (`[loaded ROOSTER.md]`, mode switches, the context
 warning) stays a plain text block with no bubble: it is nobody's turn.
 
+## Plugin icon
+
+`src/main/resources/META-INF/pluginIcon.png` (40×40) and `pluginIcon@2x.png`
+(80×80), cropped from the mascot artwork with Pillow.
+
+**There is no `<icon>` element in `plugin.xml`.** The platform finds the icon by
+filename convention — verified by extracting three bundled plugins (Markdown,
+Shell, JSON): each ships `META-INF/pluginIcon.svg` + `pluginIcon_dark.svg` and
+none of their manifests contains an `<icon>` tag at all. PNG is the accepted
+fallback where SVG isn't available, which is the case here: the source is flat
+raster art and this machine has no vectorisation tooling.
+
+**Light-only, no `_dark` variant, deliberately.** The artwork sits on a solid
+white card, so a dark variant needs the white knocked out. Threshold-based
+removal leaves a light fringe ringing the outline — 89 near-white pixels survive
+at the artwork's anti-aliased edges, plainly visible composited over a dark
+background. Alpha-from-luminance would fix the fringe but eat the artwork's own
+light-cyan fill, which is worse. With no `_dark` file present the platform falls
+back to the light icon, which is a correct icon on a white ground rather than a
+broken one with a halo.
+
 ## Editor context attachments
 
 Right-click in the editor → **Attach to Rooster Chat**. With a selection it
